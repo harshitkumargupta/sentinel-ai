@@ -166,8 +166,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 2** — Database & domain model (events, incidents, rules, users, audit)
 - [x] **Phase 3** — Authentication & authorization (JWT, roles ADMIN/ANALYST/VIEWER)
 - [x] **Phase 4** — REST APIs (events, incidents, rules, users, dashboard) + audit hash chain
-- [ ] **Phase 5** — Incident model & triage workflow
-- [ ] **Phase 6** — Detection rule engine
+- [x] **Phase 5** — Incident model & triage workflow (status/feedback/assign APIs)
+- [x] **Phase 6** — Detection rule engine (pluggable strategies, auto incident creation/correlation)
 - [ ] **Phase 7** — Risk scoring
 - [ ] **Phase 8** — Dashboard read models & metrics API
 - [ ] **Phase 9** — Frontend: events & incidents views
@@ -231,3 +231,4 @@ All responses use the `ApiResponse` envelope `{ success, data, error, timestamp 
 - [Event taxonomy & roles](docs/event-taxonomy.md)
 - [API contracts](docs/api-contracts.md)
 - [Entity-relationship diagram (ERD)](docs/erd.md)
+- [Detection engine](docs/detection.md)

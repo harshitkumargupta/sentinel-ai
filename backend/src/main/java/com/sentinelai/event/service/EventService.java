@@ -8,8 +8,10 @@ import com.sentinelai.event.domain.EventType;
 import com.sentinelai.event.domain.SecurityEvent;
 import com.sentinelai.event.dto.CreateEventRequest;
 import com.sentinelai.event.dto.EventResponse;
+import com.sentinelai.event.event.SecurityEventCreatedEvent;
 import com.sentinelai.event.repository.SecurityEventRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class EventService {
 
     private final SecurityEventRepository securityEventRepository;
     private final OrganizationRepository organizationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public EventResponse create(CreateEventRequest req, AppUserPrincipal actor) {
@@ -43,6 +46,7 @@ public class EventService {
                 .correlationKey(req.correlationKey())
                 .eventTimestamp(req.eventTimestamp() != null ? req.eventTimestamp() : Instant.now())
                 .build());
+        eventPublisher.publishEvent(new SecurityEventCreatedEvent(event.getId(), actor.getOrgId()));
         return EventResponse.from(event);
     }
 

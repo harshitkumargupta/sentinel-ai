@@ -7,7 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface IncidentRepository
@@ -22,4 +24,7 @@ public interface IncidentRepository
     long countByOrg_IdAndStatus(Long orgId, IncidentStatus status);
 
     long countByOrg_IdAndSeverity(Long orgId, Severity severity);
+
+    Optional<Incident> findFirstByOrg_IdAndCorrelationKeyAndStatusInOrderByIdDesc(
+            Long orgId, String correlationKey, Collection<IncidentStatus> statuses);
 }

@@ -22,6 +22,14 @@ sentinel:
   security:
     max-failed-logins: 5
     lockout-minutes: 15
+  detection:
+    enabled: true
+    max-linked-events: 100
+    severity-scores:
+      LOW: 25
+      MEDIUM: 50
+      HIGH: 75
+      CRITICAL: 100
 
 # OpenAPI / Swagger UI -> http://localhost:8080/swagger-ui.html
 springdoc:

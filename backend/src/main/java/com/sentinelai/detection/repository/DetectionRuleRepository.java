@@ -14,5 +14,7 @@ public interface DetectionRuleRepository extends JpaRepository<DetectionRule, Lo
 
     List<DetectionRule> findByEnabledTrue();
 
+    List<DetectionRule> findByOrg_IdAndEnabledTrue(Long orgId);
+
     boolean existsByName(String name);
 }

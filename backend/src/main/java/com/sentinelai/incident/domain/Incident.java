@@ -68,6 +68,10 @@ public class Incident extends BaseAuditableEntity {
     @Column(nullable = false, columnDefinition = "enum('TRUE_POSITIVE','FALSE_POSITIVE','UNREVIEWED')")
     private IncidentFeedback feedback;
 
+    // Set by the detection engine to correlate repeated firings of the same rule/entity.
+    @Column(name = "correlation_key", length = 255)
+    private String correlationKey;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")
     private User assignedTo;
