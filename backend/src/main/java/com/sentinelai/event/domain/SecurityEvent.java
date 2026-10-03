@@ -41,6 +41,10 @@ public class SecurityEvent {
     @JoinColumn(name = "org_id", nullable = false)
     private Organization org;
 
+    // Optional client-supplied id for idempotent ingestion (unique per org when present).
+    @Column(name = "client_event_id", length = 100)
+    private String clientEventId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false,
             columnDefinition = "enum('FAILED_LOGIN','BRUTE_FORCE','SUSPICIOUS_LOGIN','API_ABUSE','ABNORMAL_ACCESS','HONEYTOKEN_ACCESS','OTHER')")
