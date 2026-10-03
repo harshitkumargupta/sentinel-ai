@@ -41,6 +41,10 @@ public class SecurityEvent {
     @JoinColumn(name = "org_id", nullable = false)
     private Organization org;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "site_id")
+    private com.sentinelai.site.domain.Site site;
+
     // Optional client-supplied id for idempotent ingestion (unique per org when present).
     @Column(name = "client_event_id", length = 100)
     private String clientEventId;

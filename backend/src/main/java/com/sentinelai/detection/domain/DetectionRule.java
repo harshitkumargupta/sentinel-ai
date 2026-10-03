@@ -40,6 +40,10 @@ public class DetectionRule extends BaseAuditableEntity {
     @JoinColumn(name = "org_id", nullable = false)
     private Organization org;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "site_id")
+    private com.sentinelai.site.domain.Site site;
+
     @Column(nullable = false, length = 150)
     private String name;
 

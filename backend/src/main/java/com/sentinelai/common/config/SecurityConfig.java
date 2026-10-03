@@ -2,6 +2,7 @@ package com.sentinelai.common.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.auth.security.JwtAuthenticationFilter;
+import com.sentinelai.site.security.ApiKeyAuthenticationFilter;
 import com.sentinelai.common.web.ApiResponse;
 import com.sentinelai.common.web.ApiResponse.ApiError;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,6 +33,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
     private final ObjectMapper objectMapper;
 
     private static final String[] PUBLIC = {
@@ -56,7 +58,8 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(authenticationEntryPoint())
                         .accessDeniedHandler(accessDeniedHandler()))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(apiKeyAuthenticationFilter, JwtAuthenticationFilter.class);
         return http.build();
     }
 

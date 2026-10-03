@@ -9,6 +9,8 @@ import com.sentinelai.event.repository.SecurityEventRepository;
 import com.sentinelai.ingestion.enrich.GeoIpEnricher;
 import com.sentinelai.ingestion.normalize.EventNormalizer;
 import com.sentinelai.ingestion.normalize.NormalizedEvent;
+import com.sentinelai.site.domain.Site;
+import com.sentinelai.site.repository.SiteRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,7 @@ public class IngestionService {
     private final Map<String, EventNormalizer> normalizers;
     private final SecurityEventRepository eventRepository;
     private final OrganizationRepository organizationRepository;
+    private final SiteRepository siteRepository;
     private final GeoIpEnricher geoIpEnricher;
     private final IngestionProperties properties;
     private final ApplicationEventPublisher publisher;
@@ -46,6 +49,7 @@ public class IngestionService {
     public IngestionService(List<EventNormalizer> normalizerBeans,
                             SecurityEventRepository eventRepository,
                             OrganizationRepository organizationRepository,
+                            SiteRepository siteRepository,
                             GeoIpEnricher geoIpEnricher,
                             IngestionProperties properties,
                             ApplicationEventPublisher publisher,
@@ -54,6 +58,7 @@ public class IngestionService {
                 .collect(Collectors.toMap(EventNormalizer::sourceType, Function.identity()));
         this.eventRepository = eventRepository;
         this.organizationRepository = organizationRepository;
+        this.siteRepository = siteRepository;
         this.geoIpEnricher = geoIpEnricher;
         this.properties = properties;
         this.publisher = publisher;
@@ -65,7 +70,8 @@ public class IngestionService {
     }
 
     @Transactional
-    public IngestOutcome ingest(Long orgId, String sourceType, JsonNode payload, String clientEventIdOverride) {
+    public IngestOutcome ingest(Long orgId, Long siteId, String sourceType, JsonNode payload,
+                                String clientEventIdOverride) {
         if (payload == null || payload.isNull()) {
             throw new BadRequestException("payload is required");
         }
@@ -95,8 +101,15 @@ public class IngestionService {
         }
         String entityKey = n.getEntityKey() != null ? n.getEntityKey() : deriveEntityKey(n);
 
+        Site site = null;
+        if (siteId != null) {
+            site = siteRepository.getReferenceById(siteId);
+            site.setLastEventAt(timestamp); // for site-silence detection
+        }
+
         SecurityEvent event = eventRepository.save(SecurityEvent.builder()
                 .org(organizationRepository.getReferenceById(orgId))
+                .site(site)
                 .clientEventId(clientEventId)
                 .eventType(n.getEventType())
                 .severity(n.getSeverity())

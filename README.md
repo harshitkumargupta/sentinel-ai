@@ -227,6 +227,20 @@ Interactive docs with a "Bearer" auth button: `/swagger-ui.html`.
 | GET | `/api/evaluation/detection?runId=` | VIEWER+ |
 | GET | `/api/incidents/{id}/timeline` · `/risk` · `/evidence` | VIEWER+ |
 | GET | `/api/dashboard/alert-reduction` · `/mitre-coverage` | VIEWER+ |
+| GET/POST | `/api/sites`, `/api/sites/{id}/keys/rotate`, `/api/sites/{id}/snippet` | ADMIN (list: any) |
+| POST | `/api/events/ingest` with `X-API-Key` | per-site ingest key |
+| POST | `/api/admin/actions/disable-user/{id}` (risk-gated) | ADMIN |
+| GET/POST | `/api/admin/pending[/{id}/approve|reject]` | ADMIN |
+| GET/POST | `/api/admin/sessions/{userId}[/revoke]` · `/api/admin/timeline` | ADMIN |
+
+### Multi-site & admin-action risk
+
+An org has multiple **sites**; events/incidents/rules are site-tagged and ingestion authenticates
+with a per-site **`X-API-Key`** (hashed, rotatable/revocable). Sensitive **admin actions** run
+through a risk-adaptive **guard** (factors: time, new IP/country/device, action sensitivity, burst,
+privilege escalation, peer deviation, unusual site): LOW allow · MEDIUM step-up · HIGH pending
+approval by another admin (no self-approval, expires) · CRITICAL block + session revoke + notify.
+See [docs/admin-risk.md](docs/admin-risk.md).
 
 ### Risk, correlation & incidents
 
@@ -268,3 +282,4 @@ All responses use the `ApiResponse` envelope `{ success, data, error, timestamp 
 - [Detection engine](docs/detection.md)
 - [Detection rules & simulator](docs/detection-rules.md)
 - [Risk model & correlation](docs/risk-model.md)
+- [Multi-site & admin-action risk](docs/admin-risk.md)

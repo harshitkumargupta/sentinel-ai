@@ -66,7 +66,7 @@ public class SimulatorService {
                 for (GeneratedEvent ge : events) {
                     String clientEventId = runId + ":" + scenario.id() + ":" + idx++;
                     IngestOutcome outcome = ingestionService.ingest(
-                            orgId, "generic", objectMapper.valueToTree(ge.payload()), clientEventId);
+                            orgId, null, "generic", objectMapper.valueToTree(ge.payload()), clientEventId);
                     simLabelRepository.save(SimLabel.builder()
                             .eventId(outcome.eventId())
                             .scenarioId(ge.scenarioId())

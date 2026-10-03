@@ -42,6 +42,10 @@ public class Incident extends BaseAuditableEntity {
     @JoinColumn(name = "org_id", nullable = false)
     private Organization org;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "site_id")
+    private com.sentinelai.site.domain.Site site;
+
     @Column(nullable = false)
     private String title;
 
