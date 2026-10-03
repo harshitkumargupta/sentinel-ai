@@ -18,6 +18,12 @@ spring:
     baseline-version: 0
     locations: classpath:db/migration
 
+sentinel:
+  jwt:
+    secret: test-only-sentinel-ai-secret-key-0123456789-abcdefghij
+    access-token-ttl: 900000
+    refresh-token-ttl: 604800000
+
 logging:
   level:
     org.hibernate.SQL: WARN

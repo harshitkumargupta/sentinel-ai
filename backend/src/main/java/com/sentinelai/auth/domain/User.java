@@ -54,6 +54,12 @@ public class User extends BaseAuditableEntity {
     @Column(nullable = false)
     private boolean enabled;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts;
+
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
+
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 }

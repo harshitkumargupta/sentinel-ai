@@ -164,8 +164,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 0** — Project scaffold (repo structure, tooling, docs, CI)
 - [x] **Phase 1** — Runnable skeleton (Spring Boot + MySQL, React shell, `/api/health`)
 - [x] **Phase 2** — Database & domain model (events, incidents, rules, users, audit)
-- [ ] **Phase 3** — Authentication & authorization (JWT, roles ADMIN/ANALYST/VIEWER)
-- [ ] **Phase 4** — Event ingestion API
+- [x] **Phase 3** — Authentication & authorization (JWT, roles ADMIN/ANALYST/VIEWER)
+- [x] **Phase 4** — REST APIs (events, incidents, rules, users, dashboard) + audit hash chain
 - [ ] **Phase 5** — Incident model & triage workflow
 - [ ] **Phase 6** — Detection rule engine
 - [ ] **Phase 7** — Risk scoring
@@ -181,6 +181,47 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [ ] **Phase 17** — Dockerize full stack
 - [ ] **Phase 18** — Kubernetes manifests
 - [ ] **Phase 19** — AWS deployment & CI/CD to cloud
+
+---
+
+## API & authentication
+
+Stateless **JWT** auth. Log in to get a 15-minute access token and a 7-day refresh token
+(the refresh token is stored only as a SHA-256 hash). Send the access token as
+`Authorization: Bearer <token>`; the Axios client refreshes it automatically on a 401.
+Accounts lock for 15 minutes after 5 failed logins. Every login failure and admin action is
+also recorded as a `security_event` (self-monitoring) and in the tamper-evident audit chain.
+Set `JWT_SECRET` (≥ 32 chars) in every non-dev environment.
+
+Interactive docs with a "Bearer" auth button: `/swagger-ui.html`.
+
+### Roles
+
+| Capability | VIEWER | ANALYST | ADMIN |
+|---|:---:|:---:|:---:|
+| Read events / incidents / rules / dashboard | ✓ | ✓ | ✓ |
+| Ingest events (`POST /api/events`) | | ✓ | ✓ |
+| Change incident status / feedback / assignee | | ✓ | ✓ |
+| Manage detection rules (CRUD, enable/disable) | | | ✓ |
+| Manage users; read/verify audit logs | | | ✓ |
+
+### Endpoints
+
+| Method | Path | Access |
+|---|---|---|
+| POST | `/api/auth/login` · `/api/auth/refresh` | public |
+| POST | `/api/auth/logout` · GET `/api/auth/me` | authenticated |
+| GET/POST/PUT/PATCH/DELETE | `/api/users`, `/api/users/{id}`, `/api/users/{id}/disable` | ADMIN |
+| GET | `/api/events` · `/api/events/{id}` | VIEWER+ |
+| POST | `/api/events` | ANALYST+ |
+| GET | `/api/incidents` · `/api/incidents/{id}` | VIEWER+ |
+| PATCH | `/api/incidents/{id}/status` · `/feedback` · `/assign` | ANALYST+ |
+| GET | `/api/rules` · `/api/rules/{id}` | VIEWER+ |
+| POST/PUT/DELETE/PATCH | `/api/rules`, `/api/rules/{id}`, `/api/rules/{id}/enabled` | ADMIN |
+| GET | `/api/dashboard/summary` | VIEWER+ |
+| GET | `/api/audit-logs` (paged) · `/api/audit-logs/verify` | ADMIN |
+
+All responses use the `ApiResponse` envelope `{ success, data, error, timestamp }`.
 
 ---
 

@@ -18,6 +18,11 @@ spring:
     baseline-version: 0
     locations: classpath:db/migration
 
+sentinel:
+  jwt:
+    # DEV ONLY default secret (>= 32 chars). Override with JWT_SECRET everywhere else.
+    secret: ${JWT_SECRET:dev-only-sentinel-ai-super-secret-key-change-me-0123456789}
+
 logging:
   level:
     com.sentinelai: DEBUG
