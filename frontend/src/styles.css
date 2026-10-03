@@ -234,3 +234,82 @@ button.ghost {
 .breakdown .count {
   font-weight: 700;
 }
+
+/* ---- data tables / filters / drawer (Phase 6) ---- */
+.nav-link { text-decoration: none; color: var(--muted); }
+.nav-link.active { color: var(--accent); font-weight: 600; }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+.filters input, .filters select {
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.filters label { font-size: 0.85rem; color: var(--muted); }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.data-table th, .data-table td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.data-table th { color: var(--muted); font-weight: 600; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover { background: var(--panel); }
+
+.state-box { padding: 1.25rem; color: var(--text); }
+.small { font-size: 0.75rem; }
+
+.mitre-chip {
+  background: #30363d;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.config-edit {
+  width: 260px;
+  height: 46px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
+.drawer {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+}
+.drawer-panel {
+  width: min(520px, 90vw);
+  background: var(--panel);
+  height: 100%;
+  padding: 1.25rem;
+  overflow: auto;
+  border-left: 1px solid var(--border);
+}
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

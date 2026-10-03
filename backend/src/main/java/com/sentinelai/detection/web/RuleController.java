@@ -2,6 +2,9 @@ package com.sentinelai.detection.web;
 
 import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.web.ApiResponse;
+import com.sentinelai.detection.backtest.BacktestRequest;
+import com.sentinelai.detection.backtest.BacktestResult;
+import com.sentinelai.detection.backtest.BacktestService;
 import com.sentinelai.detection.dto.CreateRuleRequest;
 import com.sentinelai.detection.dto.EnabledRequest;
 import com.sentinelai.detection.dto.RuleResponse;
@@ -31,6 +34,7 @@ import java.util.List;
 public class RuleController {
 
     private final RuleService ruleService;
+    private final BacktestService backtestService;
 
     // Reading rules is allowed for any authenticated user (VIEWER+).
     @GetMapping
@@ -72,5 +76,14 @@ public class RuleController {
                                     @AuthenticationPrincipal AppUserPrincipal actor) {
         ruleService.delete(id, actor);
         return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/{id}/backtest")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<BacktestResult> backtest(@PathVariable Long id,
+                                                @Valid @RequestBody BacktestRequest request,
+                                                @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(backtestService.backtest(
+                id, actor.getOrgId(), request.configOverride(), request.from(), request.to()));
     }
 }

@@ -39,6 +39,11 @@ springdoc:
     path: /v3/api-docs
 
 # Actuator: /api/health is our public endpoint; actuator stays under /actuator
+# Include the per-request trace id (MDC) in every log line.
+logging:
+  pattern:
+    level: "%5p [trace=%X{traceId:-}]"
+
 management:
   endpoints:
     web:

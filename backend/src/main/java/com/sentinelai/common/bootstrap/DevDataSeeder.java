@@ -83,48 +83,40 @@ public class DevDataSeeder implements CommandLineRunner {
         }
         User admin = userRepository.findByUsername("admin").orElse(null);
 
+        seedRule(org, admin, "Brute force", "BRUTE_FORCE",
+                "{\"threshold\":10,\"windowSeconds\":300,\"groupBy\":\"username\"}",
+                Severity.HIGH, "T1110");
+        seedRule(org, admin, "Credential stuffing", "CREDENTIAL_STUFFING",
+                "{\"distinctUsers\":5,\"windowSeconds\":300}", Severity.HIGH, "T1110.004");
+        seedRule(org, admin, "High-frequency API", "HIGH_FREQUENCY_API",
+                "{\"threshold\":100,\"windowSeconds\":60,\"groupBy\":\"sourceIp\"}",
+                Severity.MEDIUM, "T1499");
+        seedRule(org, admin, "Suspicious login", "SUSPICIOUS_LOGIN",
+                "{\"oddHourStart\":0,\"oddHourEnd\":5}", Severity.MEDIUM, "T1078");
+        seedRule(org, admin, "Impossible travel", "IMPOSSIBLE_TRAVEL",
+                "{\"minSecondsBetweenCountries\":3600}", Severity.HIGH, "T1078");
+        seedRule(org, admin, "Abnormal access", "ABNORMAL_ACCESS",
+                "{}", Severity.HIGH, "T1548");
+        seedRule(org, admin, "Honeytoken access", "HONEYTOKEN",
+                "{}", Severity.CRITICAL, "T1078.001");
+
+        log.info("Seeded 7 detection rules.");
+    }
+
+    private void seedRule(Organization org, User admin, String name, String ruleType,
+                          String config, Severity severity, String mitre) {
         detectionRuleRepository.save(DetectionRule.builder()
                 .org(org)
-                .name("Brute force: 10 failed logins in 5 minutes")
-                .description("Raise a HIGH incident when an account or IP accumulates 10+ "
-                        + "FAILED_LOGIN events within 5 minutes.")
-                .ruleType("THRESHOLD")
-                .config("{\"eventType\":\"FAILED_LOGIN\",\"threshold\":10,\"windowSeconds\":300,\"groupBy\":\"username\"}")
+                .name(name)
+                .description(name + " detection rule (" + ruleType + ")")
+                .ruleType(ruleType)
+                .config(config)
                 .enabled(true)
-                .severity(Severity.HIGH)
-                .mitreTechnique("T1110")
+                .severity(severity)
+                .mitreTechnique(mitre)
                 .version(1)
                 .createdBy(admin)
                 .build());
-
-        detectionRuleRepository.save(DetectionRule.builder()
-                .org(org)
-                .name("API abuse: high-frequency requests")
-                .description("A single client exceeding 1000 requests/minute or a high 4xx/5xx ratio.")
-                .ruleType("RATE_LIMIT")
-                .config("{\"eventType\":\"API_ABUSE\",\"requestsPerMinute\":1000,\"errorRatio\":0.5}")
-                .enabled(true)
-                .severity(Severity.MEDIUM)
-                .mitreTechnique("T1499")
-                .version(1)
-                .createdBy(admin)
-                .build());
-
-        detectionRuleRepository.save(DetectionRule.builder()
-                .org(org)
-                .name("Suspicious login: new geo / impossible travel")
-                .description("Successful login from a new country or implying impossible travel "
-                        + "versus the user's last login.")
-                .ruleType("GEO_VELOCITY")
-                .config("{\"eventType\":\"SUSPICIOUS_LOGIN\",\"maxKmPerHour\":900}")
-                .enabled(true)
-                .severity(Severity.HIGH)
-                .mitreTechnique("T1078")
-                .version(1)
-                .createdBy(admin)
-                .build());
-
-        log.info("Seeded 3 sample detection rules.");
     }
 
     private void seedHoneytokens(Organization org) {

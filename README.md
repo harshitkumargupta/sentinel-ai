@@ -220,6 +220,26 @@ Interactive docs with a "Bearer" auth button: `/swagger-ui.html`.
 | POST/PUT/DELETE/PATCH | `/api/rules`, `/api/rules/{id}`, `/api/rules/{id}/enabled` | ADMIN |
 | GET | `/api/dashboard/summary` | VIEWER+ |
 | GET | `/api/audit-logs` (paged) · `/api/audit-logs/verify` | ADMIN |
+| POST | `/api/events/ingest` · `/api/events/ingest/batch` | ANALYST+ |
+| GET | `/api/alerts` (paged) | VIEWER+ |
+| POST | `/api/rules/{id}/backtest` | ADMIN |
+| POST | `/api/simulator/run` · GET `/api/simulator/runs` | ADMIN (flag on) |
+| GET | `/api/evaluation/detection?runId=` | VIEWER+ |
+
+### Detection, ingestion & simulation
+
+Ingested events (API or simulator) are normalized, GeoIP-enriched, deduped by optional
+`clientEventId`, then run **synchronously** through pluggable detection rules that emit **alerts**.
+Rule thresholds live in each rule's `config` JSON (admin-editable, no redeploy), e.g.
+`{"threshold":10,"windowSeconds":300,"groupBy":"username"}`. Rules: `BRUTE_FORCE`,
+`CREDENTIAL_STUFFING`, `HIGH_FREQUENCY_API`, `SUSPICIOUS_LOGIN`, `IMPOSSIBLE_TRAVEL`,
+`ABNORMAL_ACCESS`, `HONEYTOKEN` — see [docs/detection-rules.md](docs/detection-rules.md).
+
+The **simulator** (`sentinel.simulator.enabled=true`, dev default on) generates deterministic,
+labeled events for scenarios `normal, brute_force, credential_stuffing, suspicious_login,
+impossible_travel, api_abuse, abnormal_access, honeytoken`, and the **evaluation harness** scores
+detection against those labels (precision/recall/F1, mean latency). Reference run (seed 42): overall
+precision ≈ 0.99, recall 1.00.
 
 All responses use the `ApiResponse` envelope `{ success, data, error, timestamp }`.
 
@@ -232,3 +252,4 @@ All responses use the `ApiResponse` envelope `{ success, data, error, timestamp 
 - [API contracts](docs/api-contracts.md)
 - [Entity-relationship diagram (ERD)](docs/erd.md)
 - [Detection engine](docs/detection.md)
+- [Detection rules & simulator](docs/detection-rules.md)

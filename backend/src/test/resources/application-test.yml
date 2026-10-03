@@ -23,6 +23,9 @@ sentinel:
     secret: test-only-sentinel-ai-secret-key-0123456789-abcdefghij
     access-token-ttl: 900000
     refresh-token-ttl: 604800000
+  simulator:
+    enabled: true
+    default-intensity: 3
 
 logging:
   level:
