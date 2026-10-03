@@ -8,8 +8,13 @@ import com.sentinelai.common.domain.Severity;
 import com.sentinelai.common.repository.OrganizationRepository;
 import com.sentinelai.detection.domain.DetectionRule;
 import com.sentinelai.detection.repository.DetectionRuleRepository;
+import com.sentinelai.adminrisk.domain.AdminBaseline;
+import com.sentinelai.adminrisk.domain.AdminBaselineId;
+import com.sentinelai.adminrisk.domain.AdminBaselineRepository;
 import com.sentinelai.honeytoken.domain.Honeytoken;
 import com.sentinelai.honeytoken.repository.HoneytokenRepository;
+import com.sentinelai.site.domain.UserSiteAccess;
+import com.sentinelai.site.repository.UserSiteAccessRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -40,7 +45,11 @@ public class DevDataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final DetectionRuleRepository detectionRuleRepository;
     private final HoneytokenRepository honeytokenRepository;
+    private final UserSiteAccessRepository userSiteAccessRepository;
+    private final AdminBaselineRepository adminBaselineRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    private static final Long DEFAULT_SITE_ID = 1L;
 
     @Override
     public void run(String... args) {
@@ -52,6 +61,29 @@ public class DevDataSeeder implements CommandLineRunner {
         seedUsers(org);
         seedDetectionRules(org);
         seedHoneytokens(org);
+        seedSiteAccessAndBaselines();
+    }
+
+    private void seedSiteAccessAndBaselines() {
+        // Dev users are created after V21 ran, so grant them default-site access here (idempotent).
+        for (User u : userRepository.findAll()) {
+            if (!userSiteAccessRepository.existsById_UserIdAndId_SiteId(u.getId(), DEFAULT_SITE_ID)) {
+                userSiteAccessRepository.save(new UserSiteAccess(u.getId(), DEFAULT_SITE_ID));
+            }
+        }
+        // Seed an admin baseline so the admin-risk guard has something to deviate from.
+        userRepository.findByUsername("admin").ifPresent(admin -> {
+            if (adminBaselineRepository.findById_UserId(admin.getId()).isEmpty()) {
+                baseline(admin.getId(), "known_countries", "[\"US\"]");
+                baseline(admin.getId(), "typical_hours", "[8,9,10,11,12,13,14,15,16,17,18,19]");
+                baseline(admin.getId(), "known_sites", "[1]");
+            }
+        });
+    }
+
+    private void baseline(Long userId, String metric, String data) {
+        adminBaselineRepository.save(AdminBaseline.builder()
+                .id(new AdminBaselineId(userId, metric)).data(data).build());
     }
 
     private void seedUsers(Organization org) {

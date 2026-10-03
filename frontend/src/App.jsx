@@ -7,6 +7,8 @@ import IncidentsPage from './pages/IncidentsPage.jsx';
 import IncidentDetailPage from './pages/IncidentDetailPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import EvaluationPage from './pages/EvaluationPage.jsx';
+import SitesPage from './pages/SitesPage.jsx';
+import AdminRiskPage from './pages/AdminRiskPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 export default function App() {
@@ -21,6 +23,8 @@ export default function App() {
       <Route path="/incidents/:id" element={<ProtectedRoute><IncidentDetailPage /></ProtectedRoute>} />
       <Route path="/evaluation" element={<ProtectedRoute><EvaluationPage /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']}><AdminPage /></ProtectedRoute>} />
+      <Route path="/sites" element={<ProtectedRoute><SitesPage /></ProtectedRoute>} />
+      <Route path="/admin-risk" element={<ProtectedRoute roles={['ADMIN']}><AdminRiskPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

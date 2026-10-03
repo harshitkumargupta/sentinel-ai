@@ -9,6 +9,7 @@ import com.sentinelai.ingestion.dto.BatchIngestRequest;
 import com.sentinelai.ingestion.dto.BatchIngestResponse;
 import com.sentinelai.ingestion.dto.IngestRequest;
 import com.sentinelai.ingestion.dto.IngestResponse;
+import com.sentinelai.site.security.ApiKeyPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,23 +26,39 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ANALYST','ADMIN')")
+@PreAuthorize("hasAnyRole('ANALYST','ADMIN','INGEST')")
 @Tag(name = "Ingestion")
 public class IngestionController {
 
     private final IngestionService ingestionService;
 
+    /** (orgId, siteId) resolved from either a user (JWT) or an ingest API key. */
+    private record Target(Long orgId, Long siteId) {
+    }
+
+    private Target resolve(Object principal) {
+        if (principal instanceof ApiKeyPrincipal k) {
+            return new Target(k.orgId(), k.siteId());
+        }
+        if (principal instanceof AppUserPrincipal u) {
+            return new Target(u.getOrgId(), null); // UI ingest is untagged by site
+        }
+        throw new BadRequestException("Unsupported principal");
+    }
+
     @PostMapping("/ingest")
     public ApiResponse<IngestResponse> ingest(@Valid @RequestBody IngestRequest request,
-                                              @AuthenticationPrincipal AppUserPrincipal actor) {
+                                              @AuthenticationPrincipal Object principal) {
+        Target t = resolve(principal);
         IngestOutcome outcome = ingestionService.ingest(
-                actor.getOrgId(), request.sourceType(), request.payload(), request.clientEventId());
+                t.orgId(), t.siteId(), request.sourceType(), request.payload(), request.clientEventId());
         return ApiResponse.ok(new IngestResponse(outcome.eventId(), outcome.duplicate()));
     }
 
     @PostMapping("/ingest/batch")
     public ApiResponse<BatchIngestResponse> ingestBatch(@Valid @RequestBody BatchIngestRequest request,
-                                                        @AuthenticationPrincipal AppUserPrincipal actor) {
+                                                        @AuthenticationPrincipal Object principal) {
+        Target t = resolve(principal);
         if (request.events().size() > ingestionService.maxBatchSize()) {
             throw new BadRequestException("batch exceeds max size of " + ingestionService.maxBatchSize());
         }
@@ -49,7 +66,7 @@ public class IngestionController {
         int duplicates = 0;
         for (IngestRequest e : request.events()) {
             IngestOutcome outcome = ingestionService.ingest(
-                    actor.getOrgId(), e.sourceType(), e.payload(), e.clientEventId());
+                    t.orgId(), t.siteId(), e.sourceType(), e.payload(), e.clientEventId());
             ids.add(outcome.eventId());
             if (outcome.duplicate()) {
                 duplicates++;

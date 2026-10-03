@@ -48,7 +48,7 @@ class CorrelationServiceTest extends IntegrationTestSupport {
         p.put("username", user);
         p.put("sourceIp", "203.0.113.5");
         p.put("eventTimestamp", ts.toString());
-        ingestionService.ingest(ORG_ID, "generic", objectMapper.valueToTree(p), null);
+        ingestionService.ingest(ORG_ID, null, "generic", objectMapper.valueToTree(p), null);
     }
 
     @Test
