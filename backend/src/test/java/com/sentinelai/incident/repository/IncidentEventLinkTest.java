@@ -1,12 +1,16 @@
 package com.sentinelai.incident.repository;
 
+import com.sentinelai.common.domain.Organization;
 import com.sentinelai.common.domain.Severity;
+import com.sentinelai.common.repository.OrganizationRepository;
 import com.sentinelai.event.domain.EventType;
 import com.sentinelai.event.domain.SecurityEvent;
 import com.sentinelai.event.repository.SecurityEventRepository;
 import com.sentinelai.incident.domain.Incident;
 import com.sentinelai.incident.domain.IncidentEvent;
+import com.sentinelai.incident.domain.IncidentFeedback;
 import com.sentinelai.incident.domain.IncidentStatus;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -19,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies the incident ↔ security_event many-to-many link via the {@link IncidentEvent}
- * join entity (composite key + extra {@code added_at} attribute).
+ * join entity (composite key + {@code added_at}).
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -32,9 +36,19 @@ class IncidentEventLinkTest {
     private SecurityEventRepository securityEventRepository;
     @Autowired
     private IncidentEventRepository incidentEventRepository;
+    @Autowired
+    private OrganizationRepository organizationRepository;
+
+    private Organization org;
+
+    @BeforeEach
+    void setUp() {
+        org = organizationRepository.findById(1L).orElseThrow();
+    }
 
     private SecurityEvent newEvent(EventType type) {
         return securityEventRepository.save(SecurityEvent.builder()
+                .org(org)
                 .eventType(type)
                 .severity(Severity.MEDIUM)
                 .sourceIp("203.0.113.10")
@@ -47,9 +61,11 @@ class IncidentEventLinkTest {
     @Test
     void linksMultipleEventsToAnIncident() {
         Incident incident = incidentRepository.save(Incident.builder()
+                .org(org)
                 .title("Brute force against jdoe")
                 .status(IncidentStatus.OPEN)
                 .severity(Severity.HIGH)
+                .feedback(IncidentFeedback.UNREVIEWED)
                 .build());
 
         SecurityEvent e1 = newEvent(EventType.FAILED_LOGIN);
@@ -67,7 +83,6 @@ class IncidentEventLinkTest {
                     assertThat(link.getIncident().getId()).isEqualTo(incident.getId());
                 });
 
-        // The same event can be reached from the event side of the link.
         assertThat(incidentEventRepository.findById_EventId(e1.getId())).hasSize(1);
     }
 }

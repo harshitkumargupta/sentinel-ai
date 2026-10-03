@@ -2,6 +2,9 @@ package com.sentinelai.auth.repository;
 
 import com.sentinelai.auth.domain.Role;
 import com.sentinelai.auth.domain.User;
+import com.sentinelai.common.domain.Organization;
+import com.sentinelai.common.repository.OrganizationRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -16,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * CRUD and constraint tests for {@link UserRepository} against the real MySQL test database.
+ * CRUD and unique-constraint tests for {@link UserRepository} against the real MySQL test DB.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -25,9 +28,20 @@ class UserRepositoryTest {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private OrganizationRepository organizationRepository;
 
-    private static User newUser(String username, String email, Role role) {
+    private Organization org;
+
+    @BeforeEach
+    void setUp() {
+        // "Default Org" (id 1) is created by Flyway migration V2.
+        org = organizationRepository.findById(1L).orElseThrow();
+    }
+
+    private User newUser(String username, String email, Role role) {
         return User.builder()
+                .org(org)
                 .username(username)
                 .email(email)
                 .passwordHash("$2a$10$abcdefghijklmnopqrstuv")
@@ -41,7 +55,6 @@ class UserRepositoryTest {
         User saved = userRepository.save(newUser("alice", "alice@sentinel.ai", Role.ANALYST));
 
         assertThat(saved.getId()).isNotNull();
-        // Auditing timestamps populated by the base auditable entity.
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
 
@@ -50,10 +63,11 @@ class UserRepositoryTest {
         assertThat(found.get().getUsername()).isEqualTo("alice");
         assertThat(found.get().getRole()).isEqualTo(Role.ANALYST);
         assertThat(found.get().isEnabled()).isTrue();
+        assertThat(found.get().getOrg().getId()).isEqualTo(1L);
     }
 
     @Test
-    void findsByUsernameAndEmail() {
+    void findsByUsernameAndEmailAndRole() {
         userRepository.save(newUser("bob", "bob@sentinel.ai", Role.ADMIN));
 
         assertThat(userRepository.findByUsername("bob")).isPresent();

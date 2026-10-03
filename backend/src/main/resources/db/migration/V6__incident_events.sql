@@ -1,4 +1,4 @@
--- SentinelAI :: incident_events (many-to-many join between incidents and security_events)
+-- SentinelAI :: incident_events (many-to-many join incidents <-> security_events)
 CREATE TABLE incident_events (
     incident_id BIGINT      NOT NULL,
     event_id    BIGINT      NOT NULL,

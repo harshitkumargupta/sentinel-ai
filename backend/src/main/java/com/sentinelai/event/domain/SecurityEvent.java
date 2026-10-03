@@ -1,13 +1,17 @@
 package com.sentinelai.event.domain;
 
+import com.sentinelai.common.domain.Organization;
 import com.sentinelai.common.domain.Severity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,9 +37,13 @@ public class SecurityEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "org_id", nullable = false)
+    private Organization org;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false,
-            columnDefinition = "enum('FAILED_LOGIN','BRUTE_FORCE','SUSPICIOUS_LOGIN','API_ABUSE','ABNORMAL_ACCESS','OTHER')")
+            columnDefinition = "enum('FAILED_LOGIN','BRUTE_FORCE','SUSPICIOUS_LOGIN','API_ABUSE','ABNORMAL_ACCESS','HONEYTOKEN_ACCESS','OTHER')")
     private EventType eventType;
 
     @Enumerated(EnumType.STRING)
@@ -54,12 +62,27 @@ public class SecurityEvent {
     @Column(length = 255)
     private String resource;
 
-    @Column(name = "asset_criticality", length = 20)
-    private String assetCriticality;
+    @Column(name = "asset_criticality")
+    private Byte assetCriticality;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_payload", columnDefinition = "json")
     private String rawPayload;
+
+    @Column(name = "geo_country", length = 2)
+    private String geoCountry;
+
+    @Column(name = "geo_city", length = 100)
+    private String geoCity;
+
+    @Column(name = "is_honeytoken", nullable = false)
+    private boolean honeytoken;
+
+    @Column(name = "entity_key", length = 255)
+    private String entityKey;
+
+    @Column(name = "correlation_key", length = 255)
+    private String correlationKey;
 
     @Column(name = "event_timestamp", nullable = false)
     private Instant eventTimestamp;
