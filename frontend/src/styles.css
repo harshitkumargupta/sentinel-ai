@@ -313,3 +313,40 @@ tr.clickable:hover { background: var(--panel); }
   justify-content: space-between;
   align-items: center;
 }
+
+/* ---- risk / incidents / heatmap (Phase 8) ---- */
+.risk-bar-wrap, .wf-bar-wrap {
+  display: inline-block;
+  width: 90px;
+  height: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+.risk-bar, .wf-bar { display: block; height: 100%; background: var(--accent); }
+
+.waterfall { display: flex; flex-direction: column; gap: 0.4rem; }
+.waterfall-total { margin-bottom: 0.5rem; }
+.wf-row { display: grid; grid-template-columns: 130px 160px 48px 1fr; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.wf-bar-wrap { width: 100%; height: 12px; }
+.wf-bar { background: #bc4c00; }
+.wf-points { font-weight: 700; }
+
+.reduction-card .reduction-line { font-size: 1.1rem; }
+
+.heatmap { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.heat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 90px;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.heat-tech { font-size: 0.8rem; font-weight: 600; }
+.heat-count { font-size: 1.1rem; font-weight: 700; }

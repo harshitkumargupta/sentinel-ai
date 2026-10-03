@@ -3,6 +3,8 @@ import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import EventsPage from './pages/EventsPage.jsx';
 import AlertsPage from './pages/AlertsPage.jsx';
+import IncidentsPage from './pages/IncidentsPage.jsx';
+import IncidentDetailPage from './pages/IncidentDetailPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import EvaluationPage from './pages/EvaluationPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -15,6 +17,8 @@ export default function App() {
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
       <Route path="/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
+      <Route path="/incidents" element={<ProtectedRoute><IncidentsPage /></ProtectedRoute>} />
+      <Route path="/incidents/:id" element={<ProtectedRoute><IncidentDetailPage /></ProtectedRoute>} />
       <Route path="/evaluation" element={<ProtectedRoute><EvaluationPage /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']}><AdminPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

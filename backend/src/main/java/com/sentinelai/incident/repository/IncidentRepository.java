@@ -21,6 +21,8 @@ public interface IncidentRepository
 
     List<Incident> findByAssignedTo_Id(Long userId);
 
+    long countByOrg_Id(Long orgId);
+
     long countByOrg_IdAndStatus(Long orgId, IncidentStatus status);
 
     long countByOrg_IdAndSeverity(Long orgId, Severity severity);
