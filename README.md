@@ -83,6 +83,43 @@ npm run dev
 
 - App: http://localhost:5173 (the login page; it links through to the dashboard, which pings the backend health endpoint).
 
+### Dev seed data & credentials
+
+Under the `dev` profile, `DevDataSeeder` inserts one user per role (passwords BCrypt-hashed) and
+three sample detection rules on first startup (idempotent). Dev login credentials:
+
+| Username  | Email                  | Password      | Role    |
+|-----------|------------------------|---------------|---------|
+| `admin`   | admin@sentinel.ai      | `Admin@123`   | ADMIN   |
+| `analyst` | analyst@sentinel.ai    | `Analyst@123` | ANALYST |
+| `viewer`  | viewer@sentinel.ai     | `Viewer@123`  | VIEWER  |
+
+> These are **development-only** credentials for local use. They are not seeded under `prod`.
+
+---
+
+## Testing
+
+```bash
+cd backend
+mvn verify
+```
+
+Repository tests (`@DataJpaTest`) run against a **real MySQL** database so native types (ENUM,
+JSON) and Flyway migrations are exercised exactly as in production. They use a separate schema,
+`sentinelai_test`, configured in `src/test/resources/application-test.yml` (defaults:
+`sentinel` / `sentinel`; override with `TEST_DB_URL` / `TEST_DB_USER` / `TEST_DB_PASSWORD`).
+
+Create it once:
+
+```sql
+CREATE DATABASE sentinelai_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON sentinelai_test.* TO 'sentinel'@'localhost';
+```
+
+> **TODO (once Docker is available):** migrate these tests to **Testcontainers** so each run
+> spins up an ephemeral MySQL container and no local `sentinelai_test` database is required.
+
 ---
 
 ## Branching strategy
@@ -102,7 +139,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 
 - [x] **Phase 0** — Project scaffold (repo structure, tooling, docs, CI)
 - [x] **Phase 1** — Runnable skeleton (Spring Boot + MySQL, React shell, `/api/health`)
-- [ ] **Phase 2** — Database & domain model (events, incidents, rules, users, audit)
+- [x] **Phase 2** — Database & domain model (events, incidents, rules, users, audit)
 - [ ] **Phase 3** — Authentication & authorization (JWT, roles ADMIN/ANALYST/VIEWER)
 - [ ] **Phase 4** — Event ingestion API
 - [ ] **Phase 5** — Incident model & triage workflow
@@ -128,3 +165,4 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [Architecture](docs/architecture.md)
 - [Event taxonomy & roles](docs/event-taxonomy.md)
 - [API contracts](docs/api-contracts.md)
+- [Entity-relationship diagram (ERD)](docs/erd.md)
