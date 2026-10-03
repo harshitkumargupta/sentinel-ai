@@ -47,7 +47,7 @@ class IncidentStatusTransitionApiTest extends IntegrationTestSupport {
                         .header("Authorization", analyst)
                         .contentType("application/json")
                         .content("{\"status\":\"RESOLVED\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("INVALID_STATE_TRANSITION"));
     }
 }

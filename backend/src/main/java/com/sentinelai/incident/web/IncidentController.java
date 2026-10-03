@@ -6,10 +6,15 @@ import com.sentinelai.common.web.ApiResponse;
 import com.sentinelai.common.web.PageResponse;
 import com.sentinelai.incident.domain.IncidentStatus;
 import com.sentinelai.incident.dto.AssignRequest;
+import com.sentinelai.incident.dto.EvidenceResponse;
 import com.sentinelai.incident.dto.IncidentDetailResponse;
 import com.sentinelai.incident.dto.IncidentResponse;
+import com.sentinelai.incident.dto.RiskResponse;
+import com.sentinelai.incident.dto.TimelineEntryResponse;
 import com.sentinelai.incident.dto.UpdateFeedbackRequest;
 import com.sentinelai.incident.dto.UpdateStatusRequest;
+
+import java.util.List;
 import com.sentinelai.incident.service.IncidentService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -50,6 +55,24 @@ public class IncidentController {
     public ApiResponse<IncidentDetailResponse> get(@PathVariable Long id,
                                                    @AuthenticationPrincipal AppUserPrincipal actor) {
         return ApiResponse.ok(incidentService.getDetail(id, actor));
+    }
+
+    @GetMapping("/{id}/timeline")
+    public ApiResponse<List<TimelineEntryResponse>> timeline(@PathVariable Long id,
+                                                             @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(incidentService.getTimeline(id, actor));
+    }
+
+    @GetMapping("/{id}/risk")
+    public ApiResponse<RiskResponse> risk(@PathVariable Long id,
+                                          @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(incidentService.getRisk(id, actor));
+    }
+
+    @GetMapping("/{id}/evidence")
+    public ApiResponse<EvidenceResponse> evidence(@PathVariable Long id,
+                                                  @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(incidentService.getEvidence(id, actor));
     }
 
     @PatchMapping("/{id}/status")

@@ -168,7 +168,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 4** — REST APIs (events, incidents, rules, users, dashboard) + audit hash chain
 - [x] **Phase 5** — Incident model & triage workflow (status/feedback/assign APIs)
 - [x] **Phase 6** — Detection rule engine (pluggable strategies, auto incident creation/correlation)
-- [ ] **Phase 7** — Risk scoring
+- [x] **Phase 7** — Risk scoring (factor pipeline, correlation, incidents, timeline)
 - [ ] **Phase 8** — Dashboard read models & metrics API
 - [ ] **Phase 9** — Frontend: events & incidents views
 - [ ] **Phase 10** — Frontend: dashboard & charts
@@ -225,6 +225,20 @@ Interactive docs with a "Bearer" auth button: `/swagger-ui.html`.
 | POST | `/api/rules/{id}/backtest` | ADMIN |
 | POST | `/api/simulator/run` · GET `/api/simulator/runs` | ADMIN (flag on) |
 | GET | `/api/evaluation/detection?runId=` | VIEWER+ |
+| GET | `/api/incidents/{id}/timeline` · `/risk` · `/evidence` | VIEWER+ |
+| GET | `/api/dashboard/alert-reduction` · `/mitre-coverage` | VIEWER+ |
+
+### Risk, correlation & incidents
+
+Detection **alerts** are correlated into **incidents** by entity (user/IP) within a time window
+(chaining related rule types). Each incident is risk-scored (0–100) by a pluggable
+`RiskFactor` pipeline (severity, frequency, repetition, asset criticality, honeytoken, user
+behavior, MITRE kill-chain stage) with weights/cutoffs in `sentinel.risk.*` — see
+[docs/risk-model.md](docs/risk-model.md). Joining is idempotent and rescores on every alert;
+crossing into HIGH/CRITICAL escalates and notifies admins. State machine
+`OPEN → INVESTIGATING → CONTAINED → RESOLVED` (+ `FALSE_POSITIVE`), with a full
+`incident_timeline`. Reference run (seed 42): **174 events → 33 alerts → 10 incidents
+(94% reduction)**, incident-level precision/recall 1.0.
 
 ### Detection, ingestion & simulation
 
@@ -253,3 +267,4 @@ All responses use the `ApiResponse` envelope `{ success, data, error, timestamp 
 - [Entity-relationship diagram (ERD)](docs/erd.md)
 - [Detection engine](docs/detection.md)
 - [Detection rules & simulator](docs/detection-rules.md)
+- [Risk model & correlation](docs/risk-model.md)

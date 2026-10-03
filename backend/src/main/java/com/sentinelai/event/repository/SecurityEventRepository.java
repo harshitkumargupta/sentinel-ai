@@ -32,6 +32,8 @@ public interface SecurityEventRepository
 
     long countByOrg_IdAndEventTimestampAfter(Long orgId, Instant after);
 
+    long countByOrg_Id(Long orgId);
+
     java.util.Optional<SecurityEvent> findByOrg_IdAndClientEventId(Long orgId, String clientEventId);
 
     List<SecurityEvent> findByOrg_IdAndEventTimestampBetweenOrderByEventTimestampAsc(

@@ -19,6 +19,7 @@ export default function NavBar() {
           <NavLink to="/dashboard" className="nav-link">Dashboard</NavLink>
           <NavLink to="/events" className="nav-link">Events</NavLink>
           <NavLink to="/alerts" className="nav-link">Alerts</NavLink>
+          <NavLink to="/incidents" className="nav-link">Incidents</NavLink>
           <NavLink to="/evaluation" className="nav-link">Evaluation</NavLink>
           {hasRole('ADMIN') && <NavLink to="/admin" className="nav-link">Admin</NavLink>}
         </nav>

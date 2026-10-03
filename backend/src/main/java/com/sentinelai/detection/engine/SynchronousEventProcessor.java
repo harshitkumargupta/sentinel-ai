@@ -10,6 +10,7 @@ import com.sentinelai.detection.repository.DetectionRuleRepository;
 import com.sentinelai.event.domain.SecurityEvent;
 import com.sentinelai.event.event.SecurityEventCreatedEvent;
 import com.sentinelai.event.repository.SecurityEventRepository;
+import com.sentinelai.incident.correlation.Correlator;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -39,6 +40,7 @@ public class SynchronousEventProcessor implements EventProcessor {
     private final DetectionProperties properties;
     private final MeterRegistry meterRegistry;
     private final ObjectMapper objectMapper;
+    private final Correlator correlator;
 
     public SynchronousEventProcessor(List<DetectionRuleEvaluator> ruleBeans,
                                      DetectionRuleRepository ruleRepository,
@@ -48,7 +50,8 @@ public class SynchronousEventProcessor implements EventProcessor {
                                      LiveRuleContext ruleContext,
                                      DetectionProperties properties,
                                      MeterRegistry meterRegistry,
-                                     ObjectMapper objectMapper) {
+                                     ObjectMapper objectMapper,
+                                     Correlator correlator) {
         this.rules = ruleBeans.stream()
                 .collect(Collectors.toMap(DetectionRuleEvaluator::type, Function.identity()));
         this.ruleRepository = ruleRepository;
@@ -59,6 +62,7 @@ public class SynchronousEventProcessor implements EventProcessor {
         this.properties = properties;
         this.meterRegistry = meterRegistry;
         this.objectMapper = objectMapper;
+        this.correlator = correlator;
         log.info("Detection engine initialized with rules: {}", this.rules.keySet());
     }
 
@@ -95,7 +99,7 @@ public class SynchronousEventProcessor implements EventProcessor {
     }
 
     private void saveAlert(SecurityEvent event, DetectionRule rule, AlertDraft draft, String runId) {
-        alertRepository.save(Alert.builder()
+        Alert alert = alertRepository.save(Alert.builder()
                 .org(organizationRepository.getReferenceById(event.getOrg().getId()))
                 .ruleId(rule.getId())
                 .ruleVersion(rule.getVersion())
@@ -109,6 +113,8 @@ public class SynchronousEventProcessor implements EventProcessor {
                 .runId(runId)
                 .build());
         meterRegistry.counter("sentinel.detection.alerts", "rule_type", rule.getRuleType()).increment();
+        // Correlate the alert into a (new or existing) incident.
+        correlator.correlate(alert);
     }
 
     private String toJson(List<Long> ids) {

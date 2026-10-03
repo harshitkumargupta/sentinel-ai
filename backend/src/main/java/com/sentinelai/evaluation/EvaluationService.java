@@ -4,9 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.alert.domain.Alert;
 import com.sentinelai.alert.repository.AlertRepository;
 import com.sentinelai.evaluation.dto.EvaluationResult;
+import com.sentinelai.evaluation.dto.EvaluationResult.AlertReduction;
+import com.sentinelai.evaluation.dto.EvaluationResult.IncidentLevel;
 import com.sentinelai.evaluation.dto.Metrics;
 import com.sentinelai.event.domain.SecurityEvent;
 import com.sentinelai.event.repository.SecurityEventRepository;
+import com.sentinelai.incident.domain.IncidentAlert;
+import com.sentinelai.incident.domain.IncidentEvent;
+import com.sentinelai.incident.repository.IncidentAlertRepository;
+import com.sentinelai.incident.repository.IncidentEventRepository;
 import com.sentinelai.simulator.domain.SimLabel;
 import com.sentinelai.simulator.repository.SimLabelRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +42,8 @@ public class EvaluationService {
     private final SimLabelRepository simLabelRepository;
     private final AlertRepository alertRepository;
     private final SecurityEventRepository eventRepository;
+    private final IncidentEventRepository incidentEventRepository;
+    private final IncidentAlertRepository incidentAlertRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -92,8 +100,59 @@ public class EvaluationService {
             perRule.put(rule, Metrics.of(rtp, rfp, rfn));
         }
 
+        // ---- incident level: did each attack scenario produce (ideally one) incident? ----
+        Map<String, Set<Long>> attackEventsByScenario = new LinkedHashMap<>();
+        for (SimLabel label : labels) {
+            if (label.isAttack()) {
+                attackEventsByScenario.computeIfAbsent(label.getScenarioId(), k -> new HashSet<>())
+                        .add(label.getEventId());
+            }
+        }
+        int detectedScenarios = 0;
+        int exactlyOne = 0;
+        Set<Long> attackIncidentIds = new HashSet<>();
+        for (Set<Long> eventIds : attackEventsByScenario.values()) {
+            Set<Long> incidentIds = new HashSet<>();
+            for (Long eventId : eventIds) {
+                for (IncidentEvent ie : incidentEventRepository.findById_EventId(eventId)) {
+                    incidentIds.add(ie.getId().getIncidentId());
+                }
+            }
+            if (!incidentIds.isEmpty()) {
+                detectedScenarios++;
+            }
+            if (incidentIds.size() == 1) {
+                exactlyOne++;
+            }
+            attackIncidentIds.addAll(incidentIds);
+        }
+        Set<Long> runIncidentIds = new HashSet<>();
+        for (Alert alert : alerts) {
+            for (IncidentAlert ia : incidentAlertRepository.findById_AlertId(alert.getId())) {
+                runIncidentIds.add(ia.getId().getIncidentId());
+            }
+        }
+        int attackScenarios = attackEventsByScenario.size();
+        long legitIncidents = runIncidentIds.stream().filter(attackIncidentIds::contains).count();
+        double incRecall = attackScenarios == 0 ? 0 : round3((double) detectedScenarios / attackScenarios);
+        double incPrecision = runIncidentIds.isEmpty() ? 0
+                : round3((double) legitIncidents / runIncidentIds.size());
+        IncidentLevel incidentLevel = new IncidentLevel(
+                incPrecision, incRecall, attackScenarios, detectedScenarios, exactlyOne);
+
+        long eventCount = labels.size();
+        long incidentCount = runIncidentIds.size();
+        double reductionPct = eventCount == 0 ? 0
+                : Math.round((1.0 - (double) incidentCount / eventCount) * 10000.0) / 100.0;
+        AlertReduction alertReduction = new AlertReduction(eventCount, alerts.size(), incidentCount, reductionPct);
+
         return new EvaluationResult(runId, labels.size(), alerts.size(),
-                Metrics.of(tp, fp, fn), perRule, meanLatencySeconds(alerts));
+                Metrics.of(tp, fp, fn), perRule, meanLatencySeconds(alerts),
+                incidentLevel, alertReduction);
+    }
+
+    private static double round3(double v) {
+        return Math.round(v * 1000.0) / 1000.0;
     }
 
     private double meanLatencySeconds(List<Alert> alerts) {

@@ -1,8 +1,13 @@
 package com.sentinelai.dashboard.service;
 
+import com.sentinelai.alert.repository.AlertRepository;
 import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.domain.Severity;
+import com.sentinelai.dashboard.dto.AlertReductionResponse;
 import com.sentinelai.dashboard.dto.DashboardSummary;
+import com.sentinelai.dashboard.dto.MitreCoverageItem;
+import com.sentinelai.detection.domain.DetectionRule;
+import com.sentinelai.detection.repository.DetectionRuleRepository;
 import com.sentinelai.event.domain.EventType;
 import com.sentinelai.event.repository.SecurityEventRepository;
 import com.sentinelai.incident.domain.IncidentStatus;
@@ -14,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +29,8 @@ public class DashboardService {
 
     private final SecurityEventRepository securityEventRepository;
     private final IncidentRepository incidentRepository;
+    private final AlertRepository alertRepository;
+    private final DetectionRuleRepository ruleRepository;
 
     @Transactional(readOnly = true)
     public DashboardSummary summary(AppUserPrincipal actor) {
@@ -32,25 +41,56 @@ public class DashboardService {
         for (Severity s : Severity.values()) {
             eventsBySeverity.put(s.name(), securityEventRepository.countByOrg_IdAndSeverity(org, s));
         }
-
         Map<String, Long> eventsByType = new LinkedHashMap<>();
         for (EventType t : EventType.values()) {
             eventsByType.put(t.name(), securityEventRepository.countByOrg_IdAndEventType(org, t));
         }
-
         Map<String, Long> incidentsByStatus = new LinkedHashMap<>();
         for (IncidentStatus st : IncidentStatus.values()) {
             incidentsByStatus.put(st.name(), incidentRepository.countByOrg_IdAndStatus(org, st));
         }
-
         Map<String, Long> incidentsBySeverity = new LinkedHashMap<>();
         for (Severity s : Severity.values()) {
             incidentsBySeverity.put(s.name(), incidentRepository.countByOrg_IdAndSeverity(org, s));
         }
-
         long eventsLast24h = securityEventRepository.countByOrg_IdAndEventTimestampAfter(org, since);
-
         return new DashboardSummary(eventsLast24h, eventsBySeverity, eventsByType,
                 incidentsByStatus, incidentsBySeverity);
+    }
+
+    @Transactional(readOnly = true)
+    public AlertReductionResponse alertReduction(AppUserPrincipal actor) {
+        Long org = actor.getOrgId();
+        long events = securityEventRepository.countByOrg_Id(org);
+        long alerts = alertRepository.countByOrg_Id(org);
+        long incidents = incidentRepository.countByOrg_Id(org);
+        double reductionPct = events == 0 ? 0.0
+                : Math.round((1.0 - (double) incidents / events) * 10000.0) / 100.0;
+        return new AlertReductionResponse(events, alerts, incidents, reductionPct);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MitreCoverageItem> mitreCoverage(AppUserPrincipal actor) {
+        Long org = actor.getOrgId();
+
+        Map<String, Long> alertCounts = new LinkedHashMap<>();
+        for (Object[] row : alertRepository.countByMitreTechnique(org)) {
+            if (row[0] != null) {
+                alertCounts.put((String) row[0], (Long) row[1]);
+            }
+        }
+        Map<String, Long> ruleCounts = new LinkedHashMap<>();
+        for (DetectionRule rule : ruleRepository.findByOrg_IdAndEnabledTrue(org)) {
+            if (rule.getMitreTechnique() != null) {
+                ruleCounts.merge(rule.getMitreTechnique(), 1L, Long::sum);
+            }
+        }
+
+        TreeSet<String> techniques = new TreeSet<>();
+        techniques.addAll(alertCounts.keySet());
+        techniques.addAll(ruleCounts.keySet());
+        return techniques.stream()
+                .map(t -> new MitreCoverageItem(t, ruleCounts.getOrDefault(t, 0L), alertCounts.getOrDefault(t, 0L)))
+                .toList();
     }
 }
