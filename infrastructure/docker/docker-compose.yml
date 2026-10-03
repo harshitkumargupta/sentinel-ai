@@ -1,0 +1,31 @@
+# SentinelAI :: local infrastructure (Phase 0/1 — MySQL only).
+# Kafka, Redis, and other services are added in later phases.
+#
+# Usage:
+#   docker compose -f infrastructure/docker/docker-compose.yml up -d
+#
+# The backend dev profile defaults to these same credentials
+# (see backend/src/main/resources/application-dev.yml).
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sentinel-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: sentinelai
+      MYSQL_USER: sentinel
+      MYSQL_PASSWORD: sentinel
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - sentinel_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psentinel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sentinel_mysql_data:

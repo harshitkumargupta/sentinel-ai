@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    # Override with env vars (DB_URL / DB_USER / DB_PASSWORD) when needed.
+    # Defaults match infrastructure/docker/docker-compose.yml.
+    url: ${DB_URL:jdbc:mysql://localhost:3306/sentinelai?createDatabaseIfNotExist=true&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USER:sentinel}
+    password: ${DB_PASSWORD:sentinel}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    # Baseline as version 0 so V1 (and later) still run on a pre-existing/empty schema.
+    baseline-version: 0
+    locations: classpath:db/migration
+
+logging:
+  level:
+    com.sentinelai: DEBUG
+    org.hibernate.SQL: DEBUG
