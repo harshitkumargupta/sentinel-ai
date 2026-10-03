@@ -2,21 +2,27 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
-/**
- * Placeholder login page for Phase 0/1. It does not authenticate against the
- * backend yet — it just drops the user into the dashboard so the shell is
- * navigable. Real auth arrives in the auth phase.
- */
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    login({ email: email || 'analyst@sentinel.ai', role: 'ANALYST' });
-    navigate('/dashboard');
+    setError(null);
+    setSubmitting(true);
+    try {
+      await login(username, password);
+      navigate('/dashboard');
+    } catch (err) {
+      const msg = err?.response?.data?.error?.message || 'Login failed. Check your credentials.';
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -25,14 +31,15 @@ export default function LoginPage() {
         <h1 className="brand">🛡️ SentinelAI</h1>
         <p className="subtitle">Mini Security Operations Center</p>
 
-        <label htmlFor="email">Email</label>
+        <label htmlFor="username">Username</label>
         <input
-          id="email"
-          type="email"
-          placeholder="analyst@sentinel.ai"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          id="username"
+          type="text"
+          placeholder="analyst"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           autoComplete="username"
+          required
         />
 
         <label htmlFor="password">Password</label>
@@ -43,10 +50,15 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
+          required
         />
 
-        <button type="submit">Sign in</button>
-        <p className="hint">Placeholder — authentication is wired up in a later phase.</p>
+        {error && <p className="error-text">{error}</p>}
+
+        <button type="submit" disabled={submitting}>
+          {submitting ? 'Signing in…' : 'Sign in'}
+        </button>
+        <p className="hint">Dev users: admin / analyst / viewer (see README for passwords).</p>
       </form>
     </div>
   );

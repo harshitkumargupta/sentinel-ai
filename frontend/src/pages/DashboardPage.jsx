@@ -1,48 +1,41 @@
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useHealth } from '../hooks/useHealth.js';
-import StatusBadge from '../components/StatusBadge.jsx';
+import { useEffect, useState } from 'react';
+import NavBar from '../components/NavBar.jsx';
+import { getSummary } from '../services/dashboard.service.js';
 
-const PLACEHOLDER_TILES = [
-  { label: 'Open Incidents', value: '—' },
-  { label: 'Events (24h)', value: '—' },
-  { label: 'Active Rules', value: '—' },
-  { label: 'Highest Risk', value: '—' },
-];
+function sum(map) {
+  return map ? Object.values(map).reduce((a, b) => a + b, 0) : 0;
+}
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
-  const { status, detail } = useHealth();
-  const navigate = useNavigate();
+  const [summary, setSummary] = useState(null);
+  const [error, setError] = useState(null);
 
-  function handleLogout() {
-    logout();
-    navigate('/login');
-  }
+  useEffect(() => {
+    getSummary()
+      .then(setSummary)
+      .catch(() => setError('Could not load dashboard summary.'));
+  }, []);
+
+  const tiles = summary
+    ? [
+        { label: 'Events (24h)', value: summary.eventsLast24h },
+        { label: 'Total events', value: sum(summary.eventsByType) },
+        { label: 'Open incidents', value: summary.incidentsByStatus?.OPEN ?? 0 },
+        { label: 'Critical events', value: summary.eventsBySeverity?.CRITICAL ?? 0 },
+      ]
+    : [];
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="brand-row">
-          <span className="brand">🛡️ SentinelAI</span>
-          <StatusBadge status={status} />
-        </div>
-        <div className="user-row">
-          <span className="user-email">{user?.email || 'guest'}</span>
-          <button className="ghost" onClick={handleLogout}>
-            Sign out
-          </button>
-        </div>
-      </header>
-
+      <NavBar />
       <main className="content">
         <h2>SOC Overview</h2>
-        <p className="subtitle">
-          Placeholder dashboard — live metrics arrive once events and incidents land (Phase 2+).
-        </p>
+        <p className="subtitle">Live counts from the SentinelAI API.</p>
+
+        {error && <p className="error-text">{error}</p>}
 
         <section className="tiles">
-          {PLACEHOLDER_TILES.map((t) => (
+          {tiles.map((t) => (
             <div className="tile" key={t.label}>
               <span className="tile-value">{t.value}</span>
               <span className="tile-label">{t.label}</span>
@@ -50,13 +43,32 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        <section className="panel">
-          <h3>Backend health</h3>
-          <pre className="code-block">
-            {status === 'up' ? JSON.stringify(detail, null, 2) : `status: ${status}`}
-          </pre>
-        </section>
+        {summary && (
+          <div className="panel-grid">
+            <Breakdown title="Events by severity" data={summary.eventsBySeverity} />
+            <Breakdown title="Events by type" data={summary.eventsByType} />
+            <Breakdown title="Incidents by status" data={summary.incidentsByStatus} />
+            <Breakdown title="Incidents by severity" data={summary.incidentsBySeverity} />
+          </div>
+        )}
       </main>
     </div>
+  );
+}
+
+function Breakdown({ title, data }) {
+  const entries = Object.entries(data || {});
+  return (
+    <section className="panel">
+      <h3>{title}</h3>
+      <ul className="breakdown">
+        {entries.map(([k, v]) => (
+          <li key={k}>
+            <span>{k}</span>
+            <span className="count">{v}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

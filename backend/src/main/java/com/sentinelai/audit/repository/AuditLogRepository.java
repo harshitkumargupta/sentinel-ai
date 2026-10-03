@@ -1,6 +1,8 @@
 package com.sentinelai.audit.repository;
 
 import com.sentinelai.audit.domain.AuditLog;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.Repository;
 
 import java.util.List;
@@ -18,6 +20,12 @@ public interface AuditLogRepository extends Repository<AuditLog, Long> {
     Optional<AuditLog> findById(Long id);
 
     List<AuditLog> findAll();
+
+    Page<AuditLog> findAllByOrderByIdDesc(Pageable pageable);
+
+    List<AuditLog> findAllByOrderByIdAsc();
+
+    Optional<AuditLog> findTopByOrderByIdDesc();
 
     long count();
 

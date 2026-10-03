@@ -175,3 +175,62 @@ button.ghost {
   border-radius: 50%;
   background: white;
 }
+
+.error-text {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+  margin-left: 1rem;
+}
+
+.nav-link {
+  font-size: 0.9rem;
+  cursor: default;
+}
+
+.nav-link.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.nav-link.muted {
+  color: var(--muted);
+}
+
+.role-chip {
+  background: var(--accent);
+  color: white;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.7rem;
+  margin-left: 0.4rem;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.breakdown {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.breakdown li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.breakdown .count {
+  font-weight: 700;
+}

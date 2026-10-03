@@ -12,6 +12,17 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+# JWT: secret MUST be supplied via env (JWT_SECRET) in every real environment.
+# A dev-only default is set in application-dev.yml. TTLs are in milliseconds.
+sentinel:
+  jwt:
+    secret: ${JWT_SECRET:}
+    access-token-ttl: 900000      # 15 minutes
+    refresh-token-ttl: 604800000  # 7 days
+  security:
+    max-failed-logins: 5
+    lockout-minutes: 15
+
 # OpenAPI / Swagger UI -> http://localhost:8080/swagger-ui.html
 springdoc:
   swagger-ui:

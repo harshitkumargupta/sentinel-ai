@@ -15,7 +15,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -71,7 +70,7 @@ public class AuditLog {
     @Column(name = "entry_hash", length = 64, columnDefinition = "char(64)")
     private String entryHash;
 
-    @CreationTimestamp
+    // Set explicitly by AuditService so it is part of the hash chain (not DB/Hibernate-generated).
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 }
