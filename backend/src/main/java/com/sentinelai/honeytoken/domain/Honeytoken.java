@@ -1,4 +1,4 @@
-package com.sentinelai.audit.domain;
+package com.sentinelai.honeytoken.domain;
 
 import com.sentinelai.common.domain.Organization;
 import jakarta.persistence.Column;
@@ -22,19 +22,17 @@ import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 /**
- * Immutable, insert-only audit record with a tamper-evident hash chain
- * ({@code prev_hash} -> {@code entry_hash}). {@code actor_id} is a plain id so the trail is
- * decoupled from the user aggregate and survives user deletion (FK is {@code ON DELETE SET NULL}).
- * The repository deliberately exposes no update or delete operations.
+ * A decoy credential/resource. Only a hash of the secret value is stored; a match on access
+ * raises a {@code HONEYTOKEN_ACCESS} event.
  */
 @Entity
-@Table(name = "audit_logs")
+@Table(name = "honeytokens")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuditLog {
+public class Honeytoken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,32 +42,18 @@ public class AuditLog {
     @JoinColumn(name = "org_id", nullable = false)
     private Organization org;
 
-    @Column(name = "actor_id")
-    private Long actorId;
-
-    @Column(nullable = false, length = 100)
-    private String action;
-
-    @Column(name = "entity_type", length = 100)
-    private String entityType;
-
-    @Column(name = "entity_id")
-    private Long entityId;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "json")
-    private String details;
-
-    @Column(name = "ip_address", length = 45)
-    private String ipAddress;
+    @Column(nullable = false, length = 50)
+    private String type;
 
     @JdbcTypeCode(SqlTypes.CHAR)
-    @Column(name = "prev_hash", length = 64, columnDefinition = "char(64)")
-    private String prevHash;
+    @Column(name = "value_hash", nullable = false, length = 64, columnDefinition = "char(64)")
+    private String valueHash;
 
-    @JdbcTypeCode(SqlTypes.CHAR)
-    @Column(name = "entry_hash", length = 64, columnDefinition = "char(64)")
-    private String entryHash;
+    @Column(length = 255)
+    private String description;
+
+    @Column(name = "triggered_count", nullable = false)
+    private Integer triggeredCount;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

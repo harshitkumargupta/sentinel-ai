@@ -1,4 +1,4 @@
--- SentinelAI :: notifications (notification module under common)
+-- SentinelAI :: notifications (notification module)
 CREATE TABLE notifications (
     id          BIGINT       NOT NULL AUTO_INCREMENT,
     user_id     BIGINT       NOT NULL,
@@ -10,6 +10,6 @@ CREATE TABLE notifications (
     KEY idx_notifications_user (user_id),
     KEY idx_notifications_incident (incident_id),
     KEY idx_notifications_read (read_flag),
-    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_notifications_incident FOREIGN KEY (incident_id) REFERENCES incidents (id) ON DELETE SET NULL
+    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_notifications_incident FOREIGN KEY (incident_id) REFERENCES incidents (id) ON DELETE RESTRICT
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

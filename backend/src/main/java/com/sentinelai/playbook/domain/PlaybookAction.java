@@ -1,4 +1,4 @@
-package com.sentinelai.ai.domain;
+package com.sentinelai.playbook.domain;
 
 import com.sentinelai.auth.domain.User;
 import com.sentinelai.incident.domain.Incident;
@@ -22,17 +22,20 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 
+/**
+ * A response action proposed for an incident, with human-in-the-loop approval and a
+ * dry-run result captured before execution.
+ */
 @Entity
-@Table(name = "ai_analyses")
+@Table(name = "playbook_actions")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AiAnalysis {
+public class PlaybookAction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,41 +45,23 @@ public class AiAnalysis {
     @JoinColumn(name = "incident_id", nullable = false)
     private Incident incident;
 
+    @Column(name = "action_type", nullable = false, length = 100)
+    private String actionType;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "agent_type", nullable = false,
-            columnDefinition = "enum('THREAT_ANALYSIS','CORRELATION','ROOT_CAUSE','RESPONSE_RECOMMENDATION')")
-    private AgentType agentType;
-
-    @Column(columnDefinition = "text")
-    private String prompt;
-
-    @Column(columnDefinition = "text")
-    private String output;
-
-    @Column(precision = 5, scale = 2)
-    private BigDecimal confidence;
+    @Column(nullable = false, columnDefinition = "enum('PROPOSED','APPROVED','EXECUTED','ROLLED_BACK')")
+    private PlaybookActionStatus status;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "evidence_event_ids", columnDefinition = "json")
-    private String evidenceEventIds;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "validation_status", columnDefinition = "enum('VALID','REJECTED','FALLBACK')")
-    private ValidationStatus validationStatus;
-
-    @Column(name = "model_name", length = 100)
-    private String modelName;
-
-    @Column(name = "latency_ms")
-    private Integer latencyMs;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "enum('PENDING','APPROVED','REJECTED','MODIFIED')")
-    private AnalysisStatus status;
+    @Column(name = "dry_run_result", columnDefinition = "json")
+    private String dryRunResult;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewed_by")
-    private User reviewedBy;
+    @JoinColumn(name = "approved_by")
+    private User approvedBy;
+
+    @Column(name = "executed_at")
+    private Instant executedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -1,13 +1,25 @@
 package com.sentinelai.audit.repository;
 
 import com.sentinelai.audit.domain.AuditLog;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
-@Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+/**
+ * Insert-only repository for the audit trail. It extends the base {@link Repository} marker
+ * (not {@code JpaRepository} or {@code CrudRepository}) and deliberately exposes only save and
+ * read operations — no update-in-place or delete — to keep the trail immutable.
+ */
+public interface AuditLogRepository extends Repository<AuditLog, Long> {
+
+    AuditLog save(AuditLog auditLog);
+
+    Optional<AuditLog> findById(Long id);
+
+    List<AuditLog> findAll();
+
+    long count();
 
     List<AuditLog> findByActorId(Long actorId);
 

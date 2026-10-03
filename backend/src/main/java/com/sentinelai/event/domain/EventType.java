@@ -2,7 +2,7 @@ package com.sentinelai.event.domain;
 
 /**
  * Catalog of security event types. Order must match the {@code ENUM(...)} in
- * migration {@code V3__security_events.sql}.
+ * migration {@code V4__security_events.sql}.
  */
 public enum EventType {
     FAILED_LOGIN,
@@ -10,5 +10,6 @@ public enum EventType {
     SUSPICIOUS_LOGIN,
     API_ABUSE,
     ABNORMAL_ACCESS,
+    HONEYTOKEN_ACCESS,
     OTHER
 }

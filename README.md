@@ -85,8 +85,9 @@ npm run dev
 
 ### Dev seed data & credentials
 
-Under the `dev` profile, `DevDataSeeder` inserts one user per role (passwords BCrypt-hashed) and
-three sample detection rules on first startup (idempotent). Dev login credentials:
+Under the `dev` profile, `DevDataSeeder` inserts one user per role (passwords BCrypt-hashed),
+three sample detection rules (with MITRE technique IDs), and two SHA-256-hashed honeytokens on
+first startup (idempotent, all under Default Org). Dev login credentials:
 
 | Username  | Email                  | Password      | Role    |
 |-----------|------------------------|---------------|---------|
@@ -110,15 +111,38 @@ JSON) and Flyway migrations are exercised exactly as in production. They use a s
 `sentinelai_test`, configured in `src/test/resources/application-test.yml` (defaults:
 `sentinel` / `sentinel`; override with `TEST_DB_URL` / `TEST_DB_USER` / `TEST_DB_PASSWORD`).
 
-Create it once:
+Create it once (single command — you'll be prompted for the MySQL root password):
 
-```sql
-CREATE DATABASE sentinelai_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-GRANT ALL PRIVILEGES ON sentinelai_test.* TO 'sentinel'@'localhost';
+```bash
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sentinelai_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON sentinelai_test.* TO 'sentinel'@'localhost'; FLUSH PRIVILEGES;"
 ```
 
 > **TODO (once Docker is available):** migrate these tests to **Testcontainers** so each run
 > spins up an ephemeral MySQL container and no local `sentinelai_test` database is required.
+
+---
+
+## Database
+
+Schema is owned by **Flyway** migrations in `backend/src/main/resources/db/migration`
+(`V1`…`V14`), applied automatically on startup; `spring.jpa.hibernate.ddl-auto=validate` makes
+the JPA entities verify against the migrated schema (the app fails fast on drift). MySQL 8+
+(InnoDB, `utf8mb4`).
+
+- **Multi-tenant:** `organizations` is the tenancy root; every org-scoped table carries `org_id`.
+  Migration `V2` seeds `Default Org` (id 1).
+- **Enums** use native MySQL `ENUM` (uppercase); **JSON** columns hold structured payloads
+  (`raw_payload`, `risk_breakdown`, `config`, `details`, …); audit hashes are `CHAR(64)`.
+- **13 tables:** organizations, users, security_events, incidents, incident_events,
+  detection_rules, backtest_runs, ai_analyses, audit_logs, notifications, honeytokens,
+  entity_baselines, playbook_actions.
+- **Delete rules:** CASCADE for owned links (`incident_events`, `backtest_runs`), SET NULL for
+  optional user references, RESTRICT elsewhere. `audit_logs` is insert-only (hash-chained).
+- Full diagram and index list: [`docs/erd.md`](docs/erd.md).
+
+JPA entities and Spring Data repositories live in their module packages (`auth`, `event`,
+`incident`, `detection`, `ai`, `audit`, `honeytoken`, `baseline`, `playbook`, `notification`),
+with a shared `BaseAuditableEntity` and `Organization` in `common`.
 
 ---
 

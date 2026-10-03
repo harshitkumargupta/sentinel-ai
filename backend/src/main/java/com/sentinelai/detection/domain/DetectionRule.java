@@ -2,6 +2,7 @@ package com.sentinelai.detection.domain;
 
 import com.sentinelai.auth.domain.User;
 import com.sentinelai.common.domain.BaseAuditableEntity;
+import com.sentinelai.common.domain.Organization;
 import com.sentinelai.common.domain.Severity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,7 +36,11 @@ public class DetectionRule extends BaseAuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "org_id", nullable = false)
+    private Organization org;
+
+    @Column(nullable = false, length = 150)
     private String name;
 
     @Column(columnDefinition = "text")
@@ -54,6 +59,12 @@ public class DetectionRule extends BaseAuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "enum('LOW','MEDIUM','HIGH','CRITICAL')")
     private Severity severity;
+
+    @Column(name = "mitre_technique", length = 20)
+    private String mitreTechnique;
+
+    @Column(name = "version", nullable = false)
+    private Integer version;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
