@@ -106,6 +106,7 @@ public class KafkaConfig {
                 topic(t.getNormalized(), p, rf),
                 topic(t.getAlerts(), p, rf),
                 topic(t.getIncidents(), p, rf),
+                topic(t.getAiInvestigations(), p, rf),
                 // Retry/DLQ: single partition, consumed serially so backoff sleeps there, never on
                 // the main partitions.
                 topic(t.getRetry(), 1, rf),

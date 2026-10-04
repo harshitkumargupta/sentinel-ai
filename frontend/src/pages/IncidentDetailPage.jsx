@@ -6,6 +6,7 @@ import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
 import RiskWaterfall from '../components/RiskWaterfall.jsx';
 import StorylineGraph from '../components/StorylineGraph.jsx';
+import AiInvestigationPanel from '../components/AiInvestigationPanel.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   getIncident, getRisk, getTimeline, getEvidence, getGraph, updateStatus, setFeedback,
@@ -26,6 +27,7 @@ export default function IncidentDetailPage() {
   const [data, setData] = useState({ incident: null, risk: null, timeline: [], evidence: null, graph: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [highlighted, setHighlighted] = useState([]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -76,6 +78,10 @@ export default function IncidentDetailPage() {
                 </div>
               )}
 
+              {canTriage && (
+                <AiInvestigationPanel incidentId={id} canReview={canTriage} onHighlight={setHighlighted} />
+              )}
+
               <section className="panel">
                 <h3>Risk breakdown</h3>
                 <RiskWaterfall risk={data.risk} />
@@ -124,7 +130,7 @@ export default function IncidentDetailPage() {
                   <thead><tr><th>ID</th><th>Type</th><th>User</th><th>IP</th><th>When</th></tr></thead>
                   <tbody>
                     {(data.evidence?.events ?? []).map((e) => (
-                      <tr key={e.id}>
+                      <tr key={e.id} className={highlighted.includes(e.id) ? 'row-highlight' : ''}>
                         <td>{e.id}</td><td>{e.eventType}</td><td>{e.username || '—'}</td>
                         <td>{e.sourceIp || '—'}</td><td>{new Date(e.eventTimestamp).toLocaleString()}</td>
                       </tr>

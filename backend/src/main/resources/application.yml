@@ -57,6 +57,7 @@ sentinel:
       incidents: incidents.updates
       retry: events.retry
       dlq: events.dlq
+      ai-investigations: ai.investigations
     # Consumer groups — one per stage, so each scales and fails independently.
     groups:
       raw-ingest: sentinel-raw-ingest
@@ -66,8 +67,26 @@ sentinel:
       notification: sentinel-notification
       retry: sentinel-retry
       dlq: sentinel-dlq
+      ai-investigation: sentinel-ai-investigation
   rate-limit:
     enabled: true
+  ai:
+    # Master feature flag. Off → every AI feature returns a deterministic fallback, no LLM contacted.
+    enabled: ${AI_ENABLED:false}
+    # 'fake' (deterministic) or 'http' (OpenAI-compatible). The API key comes ONLY from LLM_API_KEY.
+    provider: ${AI_PROVIDER:fake}
+    model: ${AI_MODEL:fake-model}
+    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    timeout-ms: 20000
+    max-tokens: 1200
+    max-retries: 2
+    template-version: v1
+    rate-limit-per-minute: 10
+    min-faithfulness: 0.5
+    budget:
+      daily-token-budget: ${AI_DAILY_TOKEN_BUDGET:2000000}
+      daily-cost-budget-usd: ${AI_DAILY_COST_USD:25.0}
+      per-org-daily-token-quota: ${AI_ORG_TOKEN_QUOTA:500000}
   baseline:
     min-samples: 30
     z-threshold: 3.0

@@ -69,6 +69,7 @@ public class KafkaProperties {
         @NotBlank private String incidents = "incidents.updates";
         @NotBlank private String retry = "events.retry";
         @NotBlank private String dlq = "events.dlq";
+        @NotBlank private String aiInvestigations = "ai.investigations";
     }
 
     /** Consumer group ids — separate groups so each stage scales and fails independently. */
@@ -82,5 +83,6 @@ public class KafkaProperties {
         @NotBlank private String notification = "sentinel-notification";
         @NotBlank private String retry = "sentinel-retry";
         @NotBlank private String dlq = "sentinel-dlq";
+        @NotBlank private String aiInvestigation = "sentinel-ai-investigation";
     }
 }

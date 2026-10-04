@@ -37,6 +37,9 @@ sentinel:
     enabled: false   # default; Redis integration tests enable it explicitly
   kafka:
     enabled: false   # default; Kafka integration tests enable it explicitly
+  ai:
+    enabled: false   # default; AI tests enable it explicitly
+    provider: fake
 
 logging:
   level:

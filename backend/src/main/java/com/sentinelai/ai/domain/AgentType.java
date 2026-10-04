@@ -8,5 +8,7 @@ public enum AgentType {
     THREAT_ANALYSIS,
     CORRELATION,
     ROOT_CAUSE,
-    RESPONSE_RECOMMENDATION
+    RESPONSE_RECOMMENDATION,
+    /** Phase 12: the single evidence-validated investigation covering all three stages. */
+    INVESTIGATION
 }

@@ -6,10 +6,10 @@ SentinelAI ingests security events, correlates them into incidents through a det
 scores risk, and gives analysts a dashboard to investigate — with AI assistance for triage and
 summarization in later phases.
 
-> **Status:** Phase 11 — Kafka event-driven ingestion pipeline (outbox, idempotent consumers,
-> retry + DLQ, chaos/observability hooks). Kafka is optional and behind `kafka.enabled`: with it off
-> (or the broker unreachable) ingestion falls back to the synchronous in-process path. Redis is
-> likewise optional with an in-memory fallback. AWS is still intentionally **not** included yet.
+> **Status:** Phase 12 — AI investigation pipeline: evidence-validated incident analysis, prompt-
+> injection defense, and safe natural-language search. AI is optional and behind `ai.enabled`; with
+> it off (or the model unavailable/over budget) every AI feature returns a deterministic fallback.
+> Kafka and Redis remain optional with their own fallbacks. AWS is still intentionally **not** in yet.
 
 ---
 
@@ -24,6 +24,7 @@ summarization in later phases.
 | Build & CI       | Maven, npm, GitHub Actions |
 | Observability    | Actuator + Prometheus endpoint (Grafana later) |
 | Caching / limits | Redis (Lettuce) — cache-aside, token-bucket rate limiting, sliding-window store; in-memory fallback |
+| AI               | Pluggable LLM (OpenAI-compatible HTTP or a deterministic fake) — evidence-validated investigation, injection defense, safe NL search; key only from `LLM_API_KEY` |
 | Planned (later)  | Prometheus/Grafana, AWS, Kubernetes |
 
 Architecture: the backend is a **modular monolith** under `com.sentinelai` with modules
@@ -186,7 +187,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 9** — ML risk model (anomaly models, FastAPI scoring service, hybrid risk)
 - [x] **Phase 10** — Redis (caching, rate limiting, sliding windows), behavioral baselines, attack-storyline graph
 - [x] **Phase 11** — Kafka event-driven pipeline (outbox, idempotency, retry + DLQ, chaos demo)
-- [ ] **Phase 12** — AI: incident summarization & triage assistance
+- [x] **Phase 12** — AI investigation (evidence validator, injection defense, safe NL search)
 - [ ] **Phase 13** — AI: natural-language querying
 - [ ] **Phase 14** — Observability (Prometheus/Grafana dashboards)
 - [ ] **Phase 15** — Hardening & security review
@@ -295,6 +296,33 @@ labeled events for scenarios `normal, brute_force, credential_stuffing, suspicio
 impossible_travel, api_abuse, abnormal_access, honeytoken`, and the **evaluation harness** scores
 detection against those labels (precision/recall/F1, mean latency). Reference run (seed 42): overall
 precision ≈ 0.99, recall 1.00.
+
+### AI: evidence-validated investigation (Phase 12)
+
+Behind `sentinel.ai.enabled` (dev default on, with a deterministic **fake** provider so no key is
+needed). The API key for a real model comes **only** from `LLM_API_KEY` (never committed or logged);
+set `AI_PROVIDER=http` and `AI_MODEL` to use an OpenAI-compatible endpoint. With AI off, or the model
+unavailable/over budget, every feature returns a deterministic fallback — the core API never fails
+because of the LLM.
+
+- **Investigate** — `POST /api/incidents/{id}/investigate` (ANALYST+, rate-limited, idempotent) runs
+  the 3-stage pipeline (analyze → correlate → recommend) asynchronously (Kafka or a thread pool) and
+  returns `202` with an analysis id. `GET /api/incidents/{id}/analysis` and `GET /api/analysis/{id}`
+  read results; `POST /api/analysis/{id}/review {APPROVE|REJECT|MODIFY}` is audit-logged and approved
+  recommendations become **PROPOSED** playbook actions.
+- **Evidence validator** (the key control) — every claim must cite event ids from *this* incident;
+  recommendation actions are allow-listed and targets must appear in the evidence; a faithfulness
+  score is recorded; invalid output gets one repair retry, then a deterministic FALLBACK.
+- **Prompt-injection defense** — untrusted log data is delimited and the model told it is not
+  instructions; an `InjectionDetector` raises a `PROMPT_INJECTION` event and flags the incident; the
+  model has no tools and output is schema-validated regardless of what the data says.
+- **Safe NL search** — `POST /api/search/nl {query}` → the model returns an allow-listed filter only
+  (never SQL); it is validated, capped, and run through the existing parameterized query, with the
+  interpreted filter shown as chips. `GET /api/evaluation/ai` reports faithfulness/validity/injection
+  metrics.
+
+See [`docs/ai-design.md`](docs/ai-design.md), [`docs/adr/ADR-002-ai-guardrails.md`](docs/adr/ADR-002-ai-guardrails.md)
+and [`docs/ai-evaluation.md`](docs/ai-evaluation.md).
 
 ### Kafka: event-driven ingestion pipeline
 

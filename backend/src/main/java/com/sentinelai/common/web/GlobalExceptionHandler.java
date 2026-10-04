@@ -4,6 +4,7 @@ import com.sentinelai.common.exception.BadRequestException;
 import com.sentinelai.common.exception.ConflictException;
 import com.sentinelai.common.exception.InvalidStateTransitionException;
 import com.sentinelai.common.exception.NotFoundException;
+import com.sentinelai.common.exception.RateLimitException;
 import com.sentinelai.common.web.ApiResponse.ApiError;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidStateTransitionException.class)
     public ResponseEntity<ApiResponse<Object>> handleTransition(InvalidStateTransitionException ex) {
         return build(HttpStatus.CONFLICT, ApiError.of("INVALID_STATE_TRANSITION", ex.getMessage()));
+    }
+
+    @ExceptionHandler(RateLimitException.class)
+    public ResponseEntity<ApiResponse<Object>> handleRateLimit(RateLimitException ex) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, ApiError.of("RATE_LIMITED", ex.getMessage()));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
