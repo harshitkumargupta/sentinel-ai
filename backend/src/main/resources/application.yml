@@ -36,6 +36,36 @@ sentinel:
     port: ${REDIS_PORT:6379}
     timeout-ms: 200
     cache-ttl-seconds: 30
+  kafka:
+    # Master feature flag for the event-driven pipeline. When false, ingestion uses the synchronous
+    # in-process EventProcessor and no Kafka beans are created.
+    enabled: ${KAFKA_ENABLED:false}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    partitions: ${KAFKA_PARTITIONS:3}
+    replication-factor: ${KAFKA_REPLICATION_FACTOR:1}
+    concurrency: ${KAFKA_CONCURRENCY:3}
+    max-retries: ${KAFKA_MAX_RETRIES:3}
+    retry-backoff-ms: 500
+    max-retry-backoff-ms: 30000
+    relay-interval-ms: 500
+    relay-batch-size: 200
+    # Topic names — keyed by entity_key so one entity's events stay ordered per partition.
+    topics:
+      raw: events.raw
+      normalized: events.normalized
+      alerts: alerts
+      incidents: incidents.updates
+      retry: events.retry
+      dlq: events.dlq
+    # Consumer groups — one per stage, so each scales and fails independently.
+    groups:
+      raw-ingest: sentinel-raw-ingest
+      detection: sentinel-detection
+      correlation: sentinel-correlation
+      analytics: sentinel-analytics
+      notification: sentinel-notification
+      retry: sentinel-retry
+      dlq: sentinel-dlq
   rate-limit:
     enabled: true
   baseline:

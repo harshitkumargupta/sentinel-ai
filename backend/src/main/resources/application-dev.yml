@@ -27,6 +27,11 @@ sentinel:
     default-intensity: 5
   redis:
     enabled: ${REDIS_ENABLED:true}
+  kafka:
+    # Dev runs the full pipeline against the local Kafka (docker compose up). If the broker is down,
+    # ingestion degrades gracefully to the synchronous path. Set KAFKA_ENABLED=false to force sync.
+    enabled: ${KAFKA_ENABLED:true}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 logging:
   level:

@@ -17,6 +17,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -77,9 +78,23 @@ public class SynchronousEventProcessor implements EventProcessor {
 
     @Override
     public void process(SecurityEvent event) {
+        for (Alert alert : runRules(event)) {
+            // Correlate each alert into a (new or existing) incident.
+            correlator.correlate(alert);
+        }
+    }
+
+    /**
+     * Runs the enabled rules against one event and persists any resulting alerts, <em>without</em>
+     * correlating them. The synchronous path then correlates inline; the Kafka detection consumer
+     * publishes the alerts to the {@code alerts} topic for the correlation consumer instead. One
+     * failing rule is caught, logged and counted — it never stops the other rules.
+     */
+    public List<Alert> runRules(SecurityEvent event) {
         ruleContext.observe(event);
         String runId = RunContextHolder.get();
         Long orgId = event.getOrg().getId();
+        List<Alert> saved = new ArrayList<>();
 
         for (DetectionRule rule : ruleRepository.findByOrg_IdAndEnabledTrue(orgId)) {
             DetectionRuleEvaluator evaluator = rules.get(rule.getRuleType());
@@ -88,7 +103,7 @@ public class SynchronousEventProcessor implements EventProcessor {
             }
             try {
                 evaluator.evaluate(event, rule, ruleContext)
-                        .ifPresent(draft -> saveAlert(event, rule, draft, runId));
+                        .ifPresent(draft -> saved.add(persistAlert(event, rule, draft, runId)));
             } catch (Exception ex) {
                 meterRegistry.counter("sentinel.detection.rule_errors", "rule_type", rule.getRuleType())
                         .increment();
@@ -96,9 +111,10 @@ public class SynchronousEventProcessor implements EventProcessor {
                         rule.getId(), rule.getRuleType(), event.getId(), ex);
             }
         }
+        return saved;
     }
 
-    private void saveAlert(SecurityEvent event, DetectionRule rule, AlertDraft draft, String runId) {
+    private Alert persistAlert(SecurityEvent event, DetectionRule rule, AlertDraft draft, String runId) {
         Alert alert = alertRepository.save(Alert.builder()
                 .org(organizationRepository.getReferenceById(event.getOrg().getId()))
                 .ruleId(rule.getId())
@@ -113,8 +129,7 @@ public class SynchronousEventProcessor implements EventProcessor {
                 .runId(runId)
                 .build());
         meterRegistry.counter("sentinel.detection.alerts", "rule_type", rule.getRuleType()).increment();
-        // Correlate the alert into a (new or existing) incident.
-        correlator.correlate(alert);
+        return alert;
     }
 
     private String toJson(List<Long> ids) {

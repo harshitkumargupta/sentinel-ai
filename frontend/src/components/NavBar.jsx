@@ -24,6 +24,7 @@ export default function NavBar() {
           <NavLink to="/sites" className="nav-link">Sites</NavLink>
           {hasRole('ADMIN') && <NavLink to="/admin" className="nav-link">Admin</NavLink>}
           {hasRole('ADMIN') && <NavLink to="/admin-risk" className="nav-link">Admin&nbsp;Risk</NavLink>}
+          {hasRole('ADMIN') && <NavLink to="/pipeline" className="nav-link">Pipeline</NavLink>}
         </nav>
       </div>
       <div className="user-row">

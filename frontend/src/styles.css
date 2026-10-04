@@ -372,3 +372,20 @@ tr.clickable:hover { background: var(--panel); }
   color: var(--accent);
 }
 input[type="range"] { vertical-align: middle; }
+
+/* ---- Pipeline status ---- */
+.pipeline-status h4 { margin: 16px 0 6px; color: var(--muted); }
+.stat-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.stat-tile {
+  flex: 1 1 140px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-label { color: var(--muted); font-size: 0.8rem; }
+.stat-value { font-size: 1.6rem; font-weight: 600; }
+.warn-text { color: #d29922; }

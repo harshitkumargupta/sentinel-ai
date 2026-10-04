@@ -32,3 +32,45 @@ outage once and subsequent calls short-circuit to the fallback. Failures are cou
 
 > Numbers are from a laptop dev box with a small seeded dataset; absolute values scale with data
 > volume, but the cached/uncached ratio is the point of interest.
+
+---
+
+# Performance — sync vs Kafka ingestion (Phase 11)
+
+`POST /api/events/ingest` can run in two modes. **Synchronous** (`kafka.enabled=false`) persists the
+event and runs the full detection → correlation → notification chain inline before responding.
+**Kafka** (`kafka.enabled=true`) persists the event and an outbox row and returns `202 Accepted`,
+with detection happening asynchronously down the pipeline.
+
+## Method
+
+- Backend on `dev` profile against local MySQL; rate limiting disabled for the run.
+- `scripts/benchmark.sh` fires **10,000** ingest requests at concurrency **24** and records
+  client-observed latency; throughput is `ok / wall-clock`. Warm-up of 50 requests excluded.
+- Run once per mode (restarting the backend between modes). `BRUTE_FORCE` rule enabled so the sync
+  path does real detection work.
+
+## Results (10,000 requests, concurrency 24, all 10,000 OK)
+
+| Mode  | Throughput   | p50     | p95     | p99     | max      |
+|-------|--------------|---------|---------|---------|----------|
+| sync  | 164 ev/sec   | 172.8ms | 319.6ms | 392.6ms | 586.0ms  |
+| kafka | 648 ev/sec   | 33.9ms  | 65.0ms  | 95.6ms  | 288.2ms  |
+
+**Kafka ingestion is ~4× the throughput and ~5× lower p95 latency** (319.6 ms → 65.0 ms), because
+the request does only a persist + enqueue instead of the whole detection chain.
+
+## Tradeoff
+
+The sync path gives **immediate** detection — by the time `ingest` returns, any alert/incident
+already exists — at the cost of high, detection-bound ingest latency that collapses under bursts.
+
+The Kafka path gives **low, predictable ingest latency** and back-pressure/buffering under load, at
+the cost of **eventual** detection: there is a short end-to-end delay (relay publish + consumer
+processing, typically well under a second on this setup) before an incident appears. For a SOC
+ingesting bursty telemetry, fast durable ingest plus asynchronous, independently-scalable detection
+is the better tradeoff — and if the broker is down, ingestion degrades gracefully back to the
+synchronous path rather than failing.
+
+> Laptop dev box, small seeded dataset and a single-node KRaft broker; absolute values scale with
+> hardware and data volume, but the sync-vs-Kafka ratio is the point of interest.

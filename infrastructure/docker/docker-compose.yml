@@ -1,11 +1,16 @@
-# SentinelAI :: local infrastructure (Phase 0/1 — MySQL only).
-# Kafka, Redis, and other services are added in later phases.
+# SentinelAI :: local infrastructure.
 #
 # Usage:
 #   docker compose -f infrastructure/docker/docker-compose.yml up -d
+#   docker compose -f infrastructure/docker/docker-compose.yml --profile ui up -d   # + Kafka UI
 #
-# The backend dev profile defaults to these same credentials
-# (see backend/src/main/resources/application-dev.yml).
+# The backend dev profile defaults to these same endpoints
+# (see backend/src/main/resources/application-dev.yml):
+#   MySQL  localhost:3306   Redis  localhost:6379   Kafka  localhost:9092
+#
+# Kafka runs in KRaft mode (no ZooKeeper). It advertises two listeners:
+#   - HOST   (localhost:9092)  for the backend running on the host
+#   - DOCKER (kafka:29092)     for other containers on this network (e.g. Kafka UI)
 
 services:
   mysql:
@@ -26,6 +31,61 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sentinel-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: sentinel-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: HOST://:9092,CONTROLLER://:9093,DOCKER://:29092
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: HOST:PLAINTEXT,CONTROLLER:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Optional: Kafka UI (http://localhost:8085). Enable with `--profile ui`.
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: sentinel-kafka-ui
+    profiles: ["ui"]
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: sentinel
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      DYNAMIC_CONFIG_ENABLED: "true"
 
 volumes:
   sentinel_mysql_data:

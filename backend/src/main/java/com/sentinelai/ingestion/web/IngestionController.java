@@ -13,6 +13,8 @@ import com.sentinelai.site.security.ApiKeyPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,13 +48,21 @@ public class IngestionController {
         throw new BadRequestException("Unsupported principal");
     }
 
+    /**
+     * Ingest one event. When the Kafka pipeline handles it, the event is persisted and enqueued for
+     * asynchronous detection, so the response is {@code 202 Accepted} with the event id. On the
+     * synchronous path (Kafka disabled or unreachable) detection has already run, so it is {@code 200 OK}.
+     */
     @PostMapping("/ingest")
-    public ApiResponse<IngestResponse> ingest(@Valid @RequestBody IngestRequest request,
-                                              @AuthenticationPrincipal Object principal) {
+    public ResponseEntity<ApiResponse<IngestResponse>> ingest(@Valid @RequestBody IngestRequest request,
+                                                              @AuthenticationPrincipal Object principal) {
         Target t = resolve(principal);
         IngestOutcome outcome = ingestionService.ingest(
                 t.orgId(), t.siteId(), request.sourceType(), request.payload(), request.clientEventId());
-        return ApiResponse.ok(new IngestResponse(outcome.eventId(), outcome.duplicate()));
+        HttpStatus status = outcome.dispatch() == IngestionService.Dispatch.KAFKA
+                ? HttpStatus.ACCEPTED : HttpStatus.OK;
+        return ResponseEntity.status(status)
+                .body(ApiResponse.ok(new IngestResponse(outcome.eventId(), outcome.duplicate())));
     }
 
     @PostMapping("/ingest/batch")

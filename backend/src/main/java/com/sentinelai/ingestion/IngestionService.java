@@ -9,9 +9,14 @@ import com.sentinelai.event.repository.SecurityEventRepository;
 import com.sentinelai.ingestion.enrich.GeoIpEnricher;
 import com.sentinelai.ingestion.normalize.EventNormalizer;
 import com.sentinelai.ingestion.normalize.NormalizedEvent;
+import com.sentinelai.kafka.EventPublisher;
+import com.sentinelai.kafka.KafkaProperties;
+import com.sentinelai.kafka.message.NormalizedEventMessage;
+import com.sentinelai.kafka.outbox.OutboxService;
 import com.sentinelai.site.domain.Site;
 import com.sentinelai.site.repository.SiteRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +39,10 @@ import java.util.stream.Collectors;
 @Service
 public class IngestionService {
 
-    public record IngestOutcome(Long eventId, boolean duplicate) {
+    /** Which detection path an ingested event was dispatched on. */
+    public enum Dispatch { SYNC, KAFKA }
+
+    public record IngestOutcome(Long eventId, boolean duplicate, Dispatch dispatch) {
     }
 
     private final Map<String, EventNormalizer> normalizers;
@@ -44,6 +52,9 @@ public class IngestionService {
     private final GeoIpEnricher geoIpEnricher;
     private final IngestionProperties properties;
     private final ApplicationEventPublisher publisher;
+    private final KafkaProperties kafkaProperties;
+    private final ObjectProvider<EventPublisher> eventPublisher;
+    private final OutboxService outboxService;
     private final Clock clock;
 
     public IngestionService(List<EventNormalizer> normalizerBeans,
@@ -53,6 +64,9 @@ public class IngestionService {
                             GeoIpEnricher geoIpEnricher,
                             IngestionProperties properties,
                             ApplicationEventPublisher publisher,
+                            KafkaProperties kafkaProperties,
+                            ObjectProvider<EventPublisher> eventPublisher,
+                            OutboxService outboxService,
                             Clock clock) {
         this.normalizers = normalizerBeans.stream()
                 .collect(Collectors.toMap(EventNormalizer::sourceType, Function.identity()));
@@ -62,6 +76,9 @@ public class IngestionService {
         this.geoIpEnricher = geoIpEnricher;
         this.properties = properties;
         this.publisher = publisher;
+        this.kafkaProperties = kafkaProperties;
+        this.eventPublisher = eventPublisher;
+        this.outboxService = outboxService;
         this.clock = clock;
     }
 
@@ -84,7 +101,7 @@ public class IngestionService {
             Optional<SecurityEvent> existing =
                     eventRepository.findByOrg_IdAndClientEventId(orgId, clientEventId);
             if (existing.isPresent()) {
-                return new IngestOutcome(existing.get().getId(), true);
+                return new IngestOutcome(existing.get().getId(), true, currentDispatch());
             }
         }
 
@@ -127,8 +144,33 @@ public class IngestionService {
                 .eventTimestamp(timestamp)
                 .build());
 
+        return dispatch(event, orgId, entityKey);
+    }
+
+    /**
+     * Route the persisted event into detection. With Kafka enabled and healthy, enqueue an outbox
+     * row (published asynchronously to {@code events.normalized}); the event + outbox row commit in
+     * one transaction. If Kafka is unreachable, degrade gracefully to the synchronous in-process
+     * path and log it once with the trace id. With Kafka disabled, always use the synchronous path.
+     */
+    private IngestOutcome dispatch(SecurityEvent event, Long orgId, String entityKey) {
+        EventPublisher kafka = eventPublisher.getIfAvailable();
+        if (kafkaProperties.isEnabled() && kafka != null && kafka.isHealthy()) {
+            outboxService.enqueue("event", event.getId(), kafkaProperties.getTopics().getNormalized(),
+                    entityKey, new NormalizedEventMessage(event.getId(), orgId, entityKey));
+            return new IngestOutcome(event.getId(), false, Dispatch.KAFKA);
+        }
+        if (kafkaProperties.isEnabled() && kafka != null) {
+            log.warn("Kafka unreachable; ingesting event {} via synchronous fallback", event.getId());
+        }
         publisher.publishEvent(new SecurityEventCreatedEvent(event.getId(), orgId));
-        return new IngestOutcome(event.getId(), false);
+        return new IngestOutcome(event.getId(), false, Dispatch.SYNC);
+    }
+
+    private Dispatch currentDispatch() {
+        EventPublisher kafka = eventPublisher.getIfAvailable();
+        return kafkaProperties.isEnabled() && kafka != null && kafka.isHealthy()
+                ? Dispatch.KAFKA : Dispatch.SYNC;
     }
 
     private String deriveEntityKey(NormalizedEvent n) {
