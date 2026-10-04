@@ -26,6 +26,12 @@ sentinel:
   simulator:
     enabled: true
     default-intensity: 3
+  rate-limit:
+    enabled: false   # don't throttle the test suite; rate limiting has its own tests
+  baseline:
+    min-samples: 5
+  redis:
+    enabled: false   # default; Redis integration tests enable it explicitly
 
 logging:
   level:

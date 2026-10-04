@@ -25,6 +25,8 @@ sentinel:
   simulator:
     enabled: true
     default-intensity: 5
+  redis:
+    enabled: ${REDIS_ENABLED:true}
 
 logging:
   level:

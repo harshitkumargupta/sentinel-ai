@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.alert.domain.Alert;
 import com.sentinelai.auth.domain.Role;
 import com.sentinelai.auth.repository.UserRepository;
+import com.sentinelai.cache.IncidentsChangedEvent;
 import com.sentinelai.common.domain.Severity;
 import com.sentinelai.common.repository.OrganizationRepository;
 import com.sentinelai.event.domain.SecurityEvent;
@@ -23,6 +24,7 @@ import com.sentinelai.risk.RiskResult;
 import com.sentinelai.risk.RiskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +59,7 @@ public class CorrelationService implements Correlator {
     private final CorrelationProperties properties;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     @Override
     @Transactional
@@ -116,6 +119,7 @@ public class CorrelationService implements Correlator {
         if (escalated) {
             escalate(incident);
         }
+        events.publishEvent(new IncidentsChangedEvent(orgId));
         return incident;
     }
 

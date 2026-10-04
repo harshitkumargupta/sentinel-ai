@@ -16,6 +16,8 @@ import com.sentinelai.incident.dto.UpdateStatusRequest;
 
 import java.util.List;
 import com.sentinelai.incident.service.IncidentService;
+import com.sentinelai.graph.GraphDtos.GraphResponse;
+import com.sentinelai.graph.GraphService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class IncidentController {
 
     private final IncidentService incidentService;
+    private final GraphService graphService;
 
     @GetMapping
     public ApiResponse<PageResponse<IncidentResponse>> list(
@@ -73,6 +76,12 @@ public class IncidentController {
     public ApiResponse<EvidenceResponse> evidence(@PathVariable Long id,
                                                   @AuthenticationPrincipal AppUserPrincipal actor) {
         return ApiResponse.ok(incidentService.getEvidence(id, actor));
+    }
+
+    @GetMapping("/{id}/graph")
+    public ApiResponse<GraphResponse> graph(@PathVariable Long id,
+                                            @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(graphService.build(id, actor));
     }
 
     @PatchMapping("/{id}/status")

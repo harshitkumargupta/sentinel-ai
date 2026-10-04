@@ -350,3 +350,25 @@ tr.clickable:hover { background: var(--panel); }
 }
 .heat-tech { font-size: 0.8rem; font-weight: 600; }
 .heat-count { font-size: 1.1rem; font-weight: 700; }
+
+/* ---- storyline graph / kill chain (Phase 10) ---- */
+.killchain {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+.kc-stage {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+}
+.kc-num {
+  font-weight: 700;
+  color: var(--accent);
+}
+input[type="range"] { vertical-align: middle; }

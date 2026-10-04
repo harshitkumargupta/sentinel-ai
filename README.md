@@ -6,8 +6,9 @@ SentinelAI ingests security events, correlates them into incidents through a det
 scores risk, and gives analysts a dashboard to investigate — with AI assistance for triage and
 summarization in later phases.
 
-> **Status:** Phase 0 & Phase 1 (scaffold + runnable skeleton). Kafka, Redis, AI, and AWS are
-> intentionally **not** included yet.
+> **Status:** Phase 10 — Redis (caching, rate limiting, sliding windows), behavioral baselines,
+> and the attack-storyline graph. Redis is optional: every use degrades gracefully to an in-memory
+> fallback. Kafka and AWS are still intentionally **not** included yet.
 
 ---
 
@@ -20,7 +21,8 @@ summarization in later phases.
 | Database         | MySQL 8 (via Docker Compose) |
 | Build & CI       | Maven, npm, GitHub Actions |
 | Observability    | Actuator + Prometheus endpoint (Grafana later) |
-| Planned (later)  | Redis, Kafka, AI services, Prometheus/Grafana, AWS, Kubernetes |
+| Caching / limits | Redis (Lettuce) — cache-aside, token-bucket rate limiting, sliding-window store; in-memory fallback |
+| Planned (later)  | Kafka, Prometheus/Grafana, AWS, Kubernetes |
 
 Architecture: the backend is a **modular monolith** under `com.sentinelai` with modules
 `auth · event · incident · detection · risk · ai · dashboard · audit · common`.
@@ -51,6 +53,9 @@ sentinel-ai/
 - Java 21, Maven
 - Node.js 20+ and npm
 - Docker (for the MySQL container) — or a local MySQL on `:3306`
+- **Redis** (optional) — `brew install redis && brew services start redis`. The `dev` profile
+  enables Redis (`REDIS_ENABLED`); if it's absent the app logs the outage once and falls back to
+  in-memory caching / rate limiting / windows, so this step can be skipped.
 
 ### 1. Start the database
 
@@ -117,8 +122,14 @@ Create it once (single command — you'll be prompted for the MySQL root passwor
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sentinelai_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON sentinelai_test.* TO 'sentinel'@'localhost'; FLUSH PRIVILEGES;"
 ```
 
+The **Redis integration test** (`RedisWindowStoreParityTest`) asserts the Redis and in-memory
+sliding-window stores make identical counting decisions. It requires a local Redis on
+`localhost:6379` (`brew install redis && brew services start redis`). All other Redis behaviour
+(rate limiter, cache, window-store fallback) is covered by unit tests that exercise the in-memory
+path, so the suite passes even when Redis is down.
+
 > **TODO (once Docker is available):** migrate these tests to **Testcontainers** so each run
-> spins up an ephemeral MySQL container and no local `sentinelai_test` database is required.
+> spins up ephemeral MySQL **and Redis** containers — no local `sentinelai_test` DB or Redis needed.
 
 ---
 
@@ -169,18 +180,18 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 5** — Incident model & triage workflow (status/feedback/assign APIs)
 - [x] **Phase 6** — Detection rule engine (pluggable strategies, auto incident creation/correlation)
 - [x] **Phase 7** — Risk scoring (factor pipeline, correlation, incidents, timeline)
-- [ ] **Phase 8** — Dashboard read models & metrics API
-- [ ] **Phase 9** — Frontend: events & incidents views
-- [ ] **Phase 10** — Frontend: dashboard & charts
-- [ ] **Phase 11** — Redis (caching, rate limiting)
-- [ ] **Phase 12** — Kafka (event streaming pipeline)
-- [ ] **Phase 13** — AI: incident summarization & triage assistance
-- [ ] **Phase 14** — AI: natural-language querying
-- [ ] **Phase 15** — Observability (Prometheus/Grafana dashboards)
-- [ ] **Phase 16** — Hardening & security review
-- [ ] **Phase 17** — Dockerize full stack
-- [ ] **Phase 18** — Kubernetes manifests
-- [ ] **Phase 19** — AWS deployment & CI/CD to cloud
+- [x] **Phase 8** — Dashboard read models, metrics API, risk waterfall & incident UI
+- [x] **Phase 8b** — Multi-site + admin-action risk engine (sites, API keys, admin risk guard)
+- [x] **Phase 9** — ML risk model (anomaly models, FastAPI scoring service, hybrid risk)
+- [x] **Phase 10** — Redis (caching, rate limiting, sliding windows), behavioral baselines, attack-storyline graph
+- [ ] **Phase 11** — Kafka (event streaming pipeline)
+- [ ] **Phase 12** — AI: incident summarization & triage assistance
+- [ ] **Phase 13** — AI: natural-language querying
+- [ ] **Phase 14** — Observability (Prometheus/Grafana dashboards)
+- [ ] **Phase 15** — Hardening & security review
+- [ ] **Phase 16** — Dockerize full stack
+- [ ] **Phase 17** — Kubernetes manifests
+- [ ] **Phase 18** — AWS deployment & CI/CD to cloud
 
 ---
 
@@ -232,6 +243,8 @@ Interactive docs with a "Bearer" auth button: `/swagger-ui.html`.
 | POST | `/api/admin/actions/disable-user/{id}` (risk-gated) | ADMIN |
 | GET/POST | `/api/admin/pending[/{id}/approve|reject]` | ADMIN |
 | GET/POST | `/api/admin/sessions/{userId}[/revoke]` · `/api/admin/timeline` | ADMIN |
+| GET | `/api/incidents/{id}/graph` (attack-storyline graph) | VIEWER+ |
+| GET | `/api/admin/cache-stats` (cache hit/miss/hit-rate) | ADMIN |
 
 ### ML risk model (hybrid)
 
@@ -282,6 +295,42 @@ impossible_travel, api_abuse, abnormal_access, honeytoken`, and the **evaluation
 detection against those labels (precision/recall/F1, mean latency). Reference run (seed 42): overall
 precision ≈ 0.99, recall 1.00.
 
+### Redis: caching, rate limiting & resilient fallback
+
+Redis (Lettuce) backs three things, each behind an interface with an **in-memory fallback** so the
+app never fails a request when Redis is disabled or down (`sentinel.redis.enabled`, default off; dev
+on). A single `RedisGateway` seam catches failures, logs the outage **once** with a traceId, counts
+it under the `sentinel.redis.failures` meter, and degrades:
+
+- **Cache-aside** for dashboard reads (`summary`, `alert-reduction`, `mitre-coverage`,
+  `recent-incidents`) with a short TTL, a per-key single-flight **stampede guard**, **tenant-scoped
+  keys** (`dash:org:{org}:site:{site}:{name}`) and **explicit event-driven invalidation** when
+  incidents/alerts change. Stats at `GET /api/admin/cache-stats`. Benchmark (cached vs uncached
+  p50/p95): [docs/performance.md](docs/performance.md) — **p95 13.9 ms → 3.2 ms (~4.3×)**.
+- **Token-bucket rate limiting** (atomic Lua) per API-key/IP, configurable per endpoint group
+  (`sentinel.rate-limit.*`: login strict, ingest generous). Breaches return `429` in the unified
+  error format with `Retry-After` + `X-RateLimit-*` headers and are recorded as `API_ABUSE` events.
+- **Sliding-window store** for detection rules (sorted sets); `RedisWindowStore` and the in-memory
+  store make **identical** counting decisions (parity test).
+
+### Behavioral baselines
+
+Per-entity (user/IP/admin) × metric (e.g. login hour) rolling **mean/std** computed incrementally
+with **Welford's algorithm** — hot in Redis, periodically persisted to `entity_baselines`, with a
+minimum sample count before a baseline is trusted (`sentinel.baseline.*`). A `BaselineDeviationRule`
+flags `|z-score|` above threshold with a human-readable reason, a `BaselineFactor` feeds the risk
+engine, and the same z-scores become ML features. **Cold-start entities are skipped, not flagged.**
+
+### Attack-storyline graph
+
+`GET /api/incidents/{id}/graph` returns typed **nodes** (incident, alert, user, IP, resource,
+honeytoken) and **edges** (`HAS_ALERT`, `INVOLVES`, `LOGIN_FROM`, `ACCESSED`, `TOUCHED`) with counts
+and timestamps, plus a **kill-chain** derived from each alert's MITRE technique. Node count is capped
+(`sentinel.graph.max-nodes`) with the remainder aggregated. The incident page renders it as an
+interactive SVG graph with click-to-inspect, a kill-chain strip, and a time slider that replays the
+attack. Example (credential stuffing): 8 users → one source IP, kill-chain stage 3 (Credential
+Access, T1110.004).
+
 All responses use the `ApiResponse` envelope `{ success, data, error, timestamp }`.
 
 ---
@@ -297,3 +346,4 @@ All responses use the `ApiResponse` envelope `{ success, data, error, timestamp 
 - [Risk model & correlation](docs/risk-model.md)
 - [Multi-site & admin-action risk](docs/admin-risk.md)
 - [ML feature spec](docs/ml-features.md) · [ML evaluation](docs/ml-evaluation.md) · [ML service](ml/README.md)
+- [Caching benchmark (cached vs uncached)](docs/performance.md)

@@ -25,6 +25,11 @@ export async function getEvidence(id) {
   return data.data;
 }
 
+export async function getGraph(id) {
+  const { data } = await api.get(`/incidents/${id}/graph`);
+  return data.data;
+}
+
 export async function updateStatus(id, status) {
   const { data } = await api.patch(`/incidents/${id}/status`, { status });
   return data.data;

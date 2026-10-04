@@ -5,9 +5,10 @@ import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
 import RiskWaterfall from '../components/RiskWaterfall.jsx';
+import StorylineGraph from '../components/StorylineGraph.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
-  getIncident, getRisk, getTimeline, getEvidence, updateStatus, setFeedback,
+  getIncident, getRisk, getTimeline, getEvidence, getGraph, updateStatus, setFeedback,
 } from '../services/incidents.service.js';
 import { messageFromError } from '../services/errors.js';
 
@@ -22,17 +23,17 @@ const NEXT_STATUS = {
 export default function IncidentDetailPage() {
   const { id } = useParams();
   const { hasRole } = useAuth();
-  const [data, setData] = useState({ incident: null, risk: null, timeline: [], evidence: null });
+  const [data, setData] = useState({ incident: null, risk: null, timeline: [], evidence: null, graph: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [detail, risk, timeline, evidence] = await Promise.all([
-        getIncident(id), getRisk(id), getTimeline(id), getEvidence(id),
+      const [detail, risk, timeline, evidence, graph] = await Promise.all([
+        getIncident(id), getRisk(id), getTimeline(id), getEvidence(id), getGraph(id),
       ]);
-      setData({ incident: detail.incident, risk, timeline, evidence });
+      setData({ incident: detail.incident, risk, timeline, evidence, graph });
     } catch (e) {
       setError(messageFromError(e));
     } finally {
@@ -78,6 +79,13 @@ export default function IncidentDetailPage() {
               <section className="panel">
                 <h3>Risk breakdown</h3>
                 <RiskWaterfall risk={data.risk} />
+              </section>
+
+              <section className="panel">
+                <h3>Attack storyline</h3>
+                {data.graph && (data.graph.nodes?.length ?? 0) > 0
+                  ? <StorylineGraph graph={data.graph} />
+                  : <p className="muted">No graph data.</p>}
               </section>
 
               <div className="panel-grid">

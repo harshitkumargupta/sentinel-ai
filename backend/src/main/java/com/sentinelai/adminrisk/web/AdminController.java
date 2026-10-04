@@ -10,6 +10,7 @@ import com.sentinelai.audit.repository.AuditLogRepository;
 import com.sentinelai.auth.repository.RefreshTokenRepository;
 import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.auth.service.UserService;
+import com.sentinelai.cache.CacheService;
 import com.sentinelai.common.web.ApiResponse;
 import com.sentinelai.common.web.PageResponse;
 import com.sentinelai.common.web.RequestUtils;
@@ -44,6 +45,7 @@ public class AdminController {
     private final RefreshTokenRepository refreshTokenRepository;
     private final AuditLogRepository auditLogRepository;
     private final GeoIpEnricher geoIpEnricher;
+    private final CacheService cacheService;
 
     /** Risk-gated user disable. Executes only when the guard returns ALLOW. */
     @PostMapping("/actions/disable-user/{id}")
@@ -78,6 +80,11 @@ public class AdminController {
     public ApiResponse<PendingActionResponse> reject(@PathVariable Long id,
                                                      @AuthenticationPrincipal AppUserPrincipal actor) {
         return ApiResponse.ok(PendingActionResponse.from(approvalService.reject(id, actor)));
+    }
+
+    @GetMapping("/cache-stats")
+    public ApiResponse<CacheService.Stats> cacheStats() {
+        return ApiResponse.ok(cacheService.stats());
     }
 
     @GetMapping("/sessions/{userId}")
