@@ -1,7 +1,9 @@
 package com.sentinelai.dashboard.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.sentinelai.alert.repository.AlertRepository;
 import com.sentinelai.auth.security.AppUserPrincipal;
+import com.sentinelai.cache.CacheService;
 import com.sentinelai.common.domain.Severity;
 import com.sentinelai.dashboard.dto.AlertReductionResponse;
 import com.sentinelai.dashboard.dto.DashboardSummary;
@@ -12,6 +14,7 @@ import com.sentinelai.event.domain.EventType;
 import com.sentinelai.event.repository.SecurityEventRepository;
 import com.sentinelai.incident.domain.IncidentStatus;
 import com.sentinelai.incident.repository.IncidentRepository;
+import com.sentinelai.redis.RedisProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +34,30 @@ public class DashboardService {
     private final IncidentRepository incidentRepository;
     private final AlertRepository alertRepository;
     private final DetectionRuleRepository ruleRepository;
+    private final CacheService cache;
+    private final RedisProperties redisProperties;
+
+    private String key(Long org, String name) {
+        return "dash:org:" + org + ":site:all:" + name;
+    }
+
+    public DashboardSummary summary(AppUserPrincipal actor) {
+        return cache.getOrLoad(key(actor.getOrgId(), "summary"),
+                new TypeReference<>() {}, redisProperties.getCacheTtlSeconds(), () -> computeSummary(actor));
+    }
+
+    public AlertReductionResponse alertReduction(AppUserPrincipal actor) {
+        return cache.getOrLoad(key(actor.getOrgId(), "alert-reduction"),
+                new TypeReference<>() {}, redisProperties.getCacheTtlSeconds(), () -> computeAlertReduction(actor));
+    }
+
+    public List<MitreCoverageItem> mitreCoverage(AppUserPrincipal actor) {
+        return cache.getOrLoad(key(actor.getOrgId(), "mitre-coverage"),
+                new TypeReference<>() {}, redisProperties.getCacheTtlSeconds(), () -> computeMitreCoverage(actor));
+    }
 
     @Transactional(readOnly = true)
-    public DashboardSummary summary(AppUserPrincipal actor) {
+    public DashboardSummary computeSummary(AppUserPrincipal actor) {
         Long org = actor.getOrgId();
         Instant since = Instant.now().minus(24, ChronoUnit.HOURS);
 
@@ -59,7 +83,7 @@ public class DashboardService {
     }
 
     @Transactional(readOnly = true)
-    public AlertReductionResponse alertReduction(AppUserPrincipal actor) {
+    public AlertReductionResponse computeAlertReduction(AppUserPrincipal actor) {
         Long org = actor.getOrgId();
         long events = securityEventRepository.countByOrg_Id(org);
         long alerts = alertRepository.countByOrg_Id(org);
@@ -70,7 +94,7 @@ public class DashboardService {
     }
 
     @Transactional(readOnly = true)
-    public List<MitreCoverageItem> mitreCoverage(AppUserPrincipal actor) {
+    public List<MitreCoverageItem> computeMitreCoverage(AppUserPrincipal actor) {
         Long org = actor.getOrgId();
 
         Map<String, Long> alertCounts = new LinkedHashMap<>();

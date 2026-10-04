@@ -30,3 +30,7 @@ Thumbs.db
 *.tmp
 dist/
 build/
+
+# Redis snapshot (local dev)
+dump.rdb
+*.rdb

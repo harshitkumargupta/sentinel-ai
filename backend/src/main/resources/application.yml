@@ -30,6 +30,19 @@ sentinel:
     weight-cap: 30
     drift-sigma-threshold: 3.0
     drift-cron: "0 */15 * * * *"
+  redis:
+    enabled: ${REDIS_ENABLED:false}
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    timeout-ms: 200
+    cache-ttl-seconds: 30
+  rate-limit:
+    enabled: true
+  baseline:
+    min-samples: 30
+    z-threshold: 3.0
+  graph:
+    max-nodes: 100
   detection:
     enabled: true
     max-linked-events: 100

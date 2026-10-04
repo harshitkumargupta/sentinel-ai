@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.alert.dto.AlertResponse;
 import com.sentinelai.audit.service.AuditService;
 import com.sentinelai.auth.domain.User;
+import com.sentinelai.cache.IncidentsChangedEvent;
 import com.sentinelai.auth.repository.UserRepository;
 import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.domain.Severity;
@@ -25,6 +26,7 @@ import com.sentinelai.incident.repository.IncidentRepository;
 import com.sentinelai.incident.repository.IncidentTimelineRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -62,6 +64,7 @@ public class IncidentService {
     private final AuditService auditService;
     private final TimelineService timeline;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher events;
 
     @Transactional(readOnly = true)
     public Page<IncidentResponse> list(AppUserPrincipal actor, IncidentStatus status,
@@ -129,6 +132,7 @@ public class IncidentService {
         String detail = "{\"from\":\"" + current + "\",\"to\":\"" + newStatus + "\"}";
         timeline.record(id, TimelineService.STATUS_CHANGE, actor.getUsername(), detail);
         auditService.record(actor.getOrgId(), actor.getUserId(), "INCIDENT_STATUS_CHANGE", "incident", id, detail, null);
+        events.publishEvent(new IncidentsChangedEvent(actor.getOrgId()));
         return IncidentResponse.from(incident);
     }
 
@@ -140,6 +144,7 @@ public class IncidentService {
         String detail = "{\"feedback\":\"" + feedback + "\"}";
         timeline.record(id, TimelineService.FEEDBACK, actor.getUsername(), detail);
         auditService.record(actor.getOrgId(), actor.getUserId(), "INCIDENT_FEEDBACK_CHANGE", "incident", id, detail, null);
+        events.publishEvent(new IncidentsChangedEvent(actor.getOrgId()));
         return IncidentResponse.from(incident);
     }
 
@@ -158,6 +163,7 @@ public class IncidentService {
         String detail = "{\"assigneeId\":" + assigneeId + "}";
         timeline.record(id, TimelineService.ASSIGNMENT, actor.getUsername(), detail);
         auditService.record(actor.getOrgId(), actor.getUserId(), "INCIDENT_ASSIGN", "incident", id, detail, null);
+        events.publishEvent(new IncidentsChangedEvent(actor.getOrgId()));
         return IncidentResponse.from(incident);
     }
 
