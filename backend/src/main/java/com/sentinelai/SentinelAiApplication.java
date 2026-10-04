@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
+import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -15,9 +16,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * Each module owns its own controllers, services, and persistence, communicating through
  * well-defined interfaces so that modules can later be split into services if needed.
  */
-// Redis is wired explicitly via RedisConfig behind sentinel.redis.enabled, so the default
-// auto-configuration (which would always create a localhost connection) is excluded.
-@SpringBootApplication(exclude = {RedisAutoConfiguration.class, RedisRepositoriesAutoConfiguration.class})
+// Redis and Kafka are wired explicitly (RedisConfig / KafkaConfig) behind their feature flags, so
+// the default auto-configuration (which would always open a localhost connection) is excluded.
+@SpringBootApplication(exclude = {RedisAutoConfiguration.class, RedisRepositoriesAutoConfiguration.class,
+        KafkaAutoConfiguration.class})
 @ConfigurationPropertiesScan
 @EnableScheduling
 public class SentinelAiApplication {

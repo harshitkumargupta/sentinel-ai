@@ -1,12 +1,15 @@
-# Test profile — runs @DataJpaTest slices against a dedicated local MySQL database
-# (sentinelai_test). Docker isn't installed in this environment; once it is, these tests
-# should move to Testcontainers (see README) so they no longer depend on a local server.
+# Test profile — runs against ephemeral Testcontainers (Docker required).
+#
+# MySQL is provided by the Testcontainers JDBC URL (jdbc:tc:mysql:...): the driver starts a
+# throwaway MySQL 8.4 container on first connection and shares it across the JVM, so every test —
+# @DataJpaTest slice or full @SpringBootTest — runs on a real MySQL with no local server. Redis and
+# Kafka containers are started on demand by the tests that need them (see support.Containers).
 spring:
   datasource:
-    url: ${TEST_DB_URL:jdbc:mysql://localhost:3306/sentinelai_test?createDatabaseIfNotExist=true&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
-    username: ${TEST_DB_USER:sentinel}
-    password: ${TEST_DB_PASSWORD:sentinel}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${TEST_DB_URL:jdbc:tc:mysql:8.4:///sentinelai_test?serverTimezone=UTC}
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    username: test
+    password: test
   jpa:
     hibernate:
       ddl-auto: validate
@@ -32,6 +35,8 @@ sentinel:
     min-samples: 5
   redis:
     enabled: false   # default; Redis integration tests enable it explicitly
+  kafka:
+    enabled: false   # default; Kafka integration tests enable it explicitly
 
 logging:
   level:

@@ -2,8 +2,6 @@ package com.sentinelai.incident.correlation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.alert.domain.Alert;
-import com.sentinelai.auth.domain.Role;
-import com.sentinelai.auth.repository.UserRepository;
 import com.sentinelai.cache.IncidentsChangedEvent;
 import com.sentinelai.common.domain.Severity;
 import com.sentinelai.common.repository.OrganizationRepository;
@@ -18,8 +16,7 @@ import com.sentinelai.incident.domain.IncidentStatus;
 import com.sentinelai.incident.repository.IncidentAlertRepository;
 import com.sentinelai.incident.repository.IncidentEventRepository;
 import com.sentinelai.incident.repository.IncidentRepository;
-import com.sentinelai.notification.domain.Notification;
-import com.sentinelai.notification.repository.NotificationRepository;
+import com.sentinelai.notification.NotificationService;
 import com.sentinelai.risk.RiskResult;
 import com.sentinelai.risk.RiskService;
 import lombok.RequiredArgsConstructor;
@@ -52,8 +49,7 @@ public class CorrelationService implements Correlator {
     private final IncidentEventRepository incidentEventRepository;
     private final SecurityEventRepository eventRepository;
     private final OrganizationRepository organizationRepository;
-    private final UserRepository userRepository;
-    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
     private final RiskService riskService;
     private final TimelineService timeline;
     private final CorrelationProperties properties;
@@ -61,15 +57,34 @@ public class CorrelationService implements Correlator {
     private final Clock clock;
     private final ApplicationEventPublisher events;
 
+    /** Result of correlating one alert, for callers that must act on the outcome (e.g. Kafka). */
+    public record CorrelationOutcome(Incident incident, boolean created, boolean escalated) {
+    }
+
     @Override
     @Transactional
     public Incident correlate(Alert alert) {
+        // Synchronous path: correlate and notify inline.
+        return doCorrelate(alert, true).incident();
+    }
+
+    /**
+     * Correlate for the Kafka pipeline: notifications are <em>not</em> sent inline — the notification
+     * consumer raises them from {@code incidents.updates} instead — and the escalation outcome is
+     * returned so the caller can publish an incident update.
+     */
+    @Transactional
+    public CorrelationOutcome correlateForPipeline(Alert alert) {
+        return doCorrelate(alert, false);
+    }
+
+    private CorrelationOutcome doCorrelate(Alert alert, boolean notify) {
         if (!properties.isEnabled()) {
-            return null;
+            return new CorrelationOutcome(null, false, false);
         }
         // Idempotency: an alert belongs to at most one incident.
         if (incidentAlertRepository.existsById_AlertId(alert.getId())) {
-            return null;
+            return new CorrelationOutcome(null, false, false);
         }
 
         Long orgId = alert.getOrg().getId();
@@ -117,10 +132,10 @@ public class CorrelationService implements Correlator {
         boolean escalated = incident.getSeverity().ordinal() >= Severity.HIGH.ordinal()
                 && (created || (oldSeverity != null && incident.getSeverity().ordinal() > oldSeverity.ordinal()));
         if (escalated) {
-            escalate(incident);
+            escalate(incident, notify);
         }
         events.publishEvent(new IncidentsChangedEvent(orgId));
-        return incident;
+        return new CorrelationOutcome(incident, created, escalated);
     }
 
     private void linkEvents(Incident incident, Alert alert) {
@@ -161,19 +176,15 @@ public class CorrelationService implements Correlator {
                 "{\"score\":" + risk.score() + ",\"severity\":\"" + risk.severity() + "\"}");
     }
 
-    private void escalate(Incident incident) {
+    private void escalate(Incident incident, boolean notify) {
         timeline.record(incident.getId(), TimelineService.ESCALATED, "system",
                 "{\"severity\":\"" + incident.getSeverity() + "\"}");
-        String message = "Incident #" + incident.getId() + " escalated to " + incident.getSeverity()
-                + " (risk " + incident.getRiskScore() + ")";
-        for (var admin : userRepository.findByRole(Role.ADMIN)) {
-            notificationRepository.save(Notification.builder()
-                    .user(admin)
-                    .incidentId(incident.getId())
-                    .message(message)
-                    .read(false)
-                    .build());
+        if (!notify) {
+            // Kafka pipeline: the notification consumer raises notifications from incidents.updates.
+            return;
         }
+        notificationService.notifyAdminsOfEscalation(incident.getId(), incident.getSeverity(),
+                incident.getRiskScore());
     }
 
     private String deriveKey(SecurityEvent trigger, Alert alert) {

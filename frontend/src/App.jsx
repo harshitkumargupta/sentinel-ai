@@ -9,6 +9,7 @@ import AdminPage from './pages/AdminPage.jsx';
 import EvaluationPage from './pages/EvaluationPage.jsx';
 import SitesPage from './pages/SitesPage.jsx';
 import AdminRiskPage from './pages/AdminRiskPage.jsx';
+import PipelinePage from './pages/PipelinePage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']}><AdminPage /></ProtectedRoute>} />
       <Route path="/sites" element={<ProtectedRoute><SitesPage /></ProtectedRoute>} />
       <Route path="/admin-risk" element={<ProtectedRoute roles={['ADMIN']}><AdminRiskPage /></ProtectedRoute>} />
+      <Route path="/pipeline" element={<ProtectedRoute roles={['ADMIN']}><PipelinePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

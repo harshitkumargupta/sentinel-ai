@@ -6,9 +6,10 @@ SentinelAI ingests security events, correlates them into incidents through a det
 scores risk, and gives analysts a dashboard to investigate — with AI assistance for triage and
 summarization in later phases.
 
-> **Status:** Phase 10 — Redis (caching, rate limiting, sliding windows), behavioral baselines,
-> and the attack-storyline graph. Redis is optional: every use degrades gracefully to an in-memory
-> fallback. Kafka and AWS are still intentionally **not** included yet.
+> **Status:** Phase 11 — Kafka event-driven ingestion pipeline (outbox, idempotent consumers,
+> retry + DLQ, chaos/observability hooks). Kafka is optional and behind `kafka.enabled`: with it off
+> (or the broker unreachable) ingestion falls back to the synchronous in-process path. Redis is
+> likewise optional with an in-memory fallback. AWS is still intentionally **not** included yet.
 
 ---
 
@@ -19,10 +20,11 @@ summarization in later phases.
 | Frontend         | React, Vite, React Router, Axios |
 | Backend          | Java 21, Spring Boot 3 (Web, Security, Data JPA, Validation, Actuator), Flyway, Lombok, springdoc-openapi |
 | Database         | MySQL 8 (via Docker Compose) |
+| Messaging        | Kafka (KRaft, no ZooKeeper) — event-driven pipeline with outbox, idempotency, retry + DLQ; optional, syncs fall back |
 | Build & CI       | Maven, npm, GitHub Actions |
 | Observability    | Actuator + Prometheus endpoint (Grafana later) |
 | Caching / limits | Redis (Lettuce) — cache-aside, token-bucket rate limiting, sliding-window store; in-memory fallback |
-| Planned (later)  | Kafka, Prometheus/Grafana, AWS, Kubernetes |
+| Planned (later)  | Prometheus/Grafana, AWS, Kubernetes |
 
 Architecture: the backend is a **modular monolith** under `com.sentinelai` with modules
 `auth · event · incident · detection · risk · ai · dashboard · audit · common`.
@@ -37,7 +39,7 @@ sentinel-ai/
 ├── frontend/                 # React app (Vite)
 ├── backend/                  # Spring Boot (Maven, Java 21)
 ├── infrastructure/
-│   ├── docker/               # docker-compose.yml (MySQL for now)
+│   ├── docker/               # docker-compose.yml (MySQL, Redis, Kafka; Kafka UI via --profile ui)
 │   └── k8s/                  # Kubernetes manifests (later)
 ├── .github/workflows/        # CI: backend build + frontend build
 ├── docs/                     # architecture, event taxonomy, API contracts
@@ -52,20 +54,23 @@ sentinel-ai/
 ### Prerequisites
 - Java 21, Maven
 - Node.js 20+ and npm
-- Docker (for the MySQL container) — or a local MySQL on `:3306`
-- **Redis** (optional) — `brew install redis && brew services start redis`. The `dev` profile
-  enables Redis (`REDIS_ENABLED`); if it's absent the app logs the outage once and falls back to
-  in-memory caching / rate limiting / windows, so this step can be skipped.
+- Docker — runs MySQL, Redis and Kafka (or bring your own on the default ports)
 
-### 1. Start the database
+### 1. Start the infrastructure
 
 ```bash
 docker compose -f infrastructure/docker/docker-compose.yml up -d
+# optional Kafka UI at http://localhost:8085:
+docker compose -f infrastructure/docker/docker-compose.yml --profile ui up -d
 ```
 
-This starts MySQL with database `sentinelai` and user `sentinel` / `sentinel` (matching the
-backend `dev` profile defaults). To point the backend at a different MySQL, set `DB_URL`,
-`DB_USER`, and `DB_PASSWORD`.
+This starts **MySQL** (`sentinelai`, user `sentinel`/`sentinel`), **Redis** (`:6379`) and **Kafka**
+(KRaft, `:9092`) — all with health checks, matching the backend `dev` profile defaults. Override
+with `DB_URL`/`DB_USER`/`DB_PASSWORD`, `REDIS_HOST`/`REDIS_PORT`, and `KAFKA_BOOTSTRAP_SERVERS`.
+
+On the `dev` profile the Kafka pipeline is **on** (`KAFKA_ENABLED`, default `true`); set
+`KAFKA_ENABLED=false` to force the synchronous ingestion path. Redis is optional (in-memory
+fallback). If Kafka is unreachable, ingestion degrades gracefully to the synchronous path.
 
 ### 2. Run the backend
 
@@ -111,25 +116,21 @@ cd backend
 mvn verify
 ```
 
-Repository tests (`@DataJpaTest`) run against a **real MySQL** database so native types (ENUM,
-JSON) and Flyway migrations are exercised exactly as in production. They use a separate schema,
-`sentinelai_test`, configured in `src/test/resources/application-test.yml` (defaults:
-`sentinel` / `sentinel`; override with `TEST_DB_URL` / `TEST_DB_USER` / `TEST_DB_PASSWORD`).
+Tests run against **real infrastructure via [Testcontainers](https://testcontainers.org)** — only
+Docker is required, no local test database or brokers. MySQL is provided by the Testcontainers JDBC
+URL (`jdbc:tc:mysql:8.4:///…` in `src/test/resources/application-test.yml`), so `@DataJpaTest` and
+full `@SpringBootTest` runs exercise native types (ENUM, JSON) and Flyway migrations exactly as in
+production. The Redis parity test and the Kafka pipeline tests start ephemeral Redis / Kafka
+containers on demand (`support.Containers`).
 
-Create it once (single command — you'll be prompted for the MySQL root password):
+The **Kafka pipeline tests** (`KafkaPipelineTest`, `KafkaDownFallbackTest`) cover the happy path end
+to end, idempotent duplicate delivery, retry→DLQ on a poison message, a poison message not blocking
+its partition, outbox recovery after a simulated crash, Kafka-down → synchronous fallback, DLQ
+replay, per-key ordering, and consumer-restart offset resume.
 
-```bash
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sentinelai_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON sentinelai_test.* TO 'sentinel'@'localhost'; FLUSH PRIVILEGES;"
-```
-
-The **Redis integration test** (`RedisWindowStoreParityTest`) asserts the Redis and in-memory
-sliding-window stores make identical counting decisions. It requires a local Redis on
-`localhost:6379` (`brew install redis && brew services start redis`). All other Redis behaviour
-(rate limiter, cache, window-store fallback) is covered by unit tests that exercise the in-memory
-path, so the suite passes even when Redis is down.
-
-> **TODO (once Docker is available):** migrate these tests to **Testcontainers** so each run
-> spins up ephemeral MySQL **and Redis** containers — no local `sentinelai_test` DB or Redis needed.
+> On macOS with Colima instead of Docker Desktop, point Testcontainers at the Colima socket:
+> `export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"` (and
+> `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`).
 
 ---
 
@@ -184,7 +185,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 8b** — Multi-site + admin-action risk engine (sites, API keys, admin risk guard)
 - [x] **Phase 9** — ML risk model (anomaly models, FastAPI scoring service, hybrid risk)
 - [x] **Phase 10** — Redis (caching, rate limiting, sliding windows), behavioral baselines, attack-storyline graph
-- [ ] **Phase 11** — Kafka (event streaming pipeline)
+- [x] **Phase 11** — Kafka event-driven pipeline (outbox, idempotency, retry + DLQ, chaos demo)
 - [ ] **Phase 12** — AI: incident summarization & triage assistance
 - [ ] **Phase 13** — AI: natural-language querying
 - [ ] **Phase 14** — Observability (Prometheus/Grafana dashboards)
@@ -294,6 +295,46 @@ labeled events for scenarios `normal, brute_force, credential_stuffing, suspicio
 impossible_travel, api_abuse, abnormal_access, honeytoken`, and the **evaluation harness** scores
 detection against those labels (precision/recall/F1, mean latency). Reference run (seed 42): overall
 precision ≈ 0.99, recall 1.00.
+
+### Kafka: event-driven ingestion pipeline
+
+Behind `sentinel.kafka.enabled` (dev default on), `POST /api/events/ingest` persists the event and
+an **outbox** row in one transaction and returns `202 Accepted`; a scheduled relay publishes outbox
+rows to Kafka, and independent consumer groups carry the event through detection, correlation,
+analytics and notification. With the flag off — or the broker unreachable — the same endpoint runs
+the original synchronous in-process detection path (returning `200`). Messages are keyed by
+`entity_key` so one entity's events stay ordered per partition. See
+[`docs/adr/ADR-001-kafka.md`](docs/adr/ADR-001-kafka.md) and the flow diagram in
+[`docs/architecture.md`](docs/architecture.md).
+
+**Topic map**
+
+| Topic | Produced by | Consumed by (group) | Purpose |
+|-------|-------------|---------------------|---------|
+| `events.raw` | external collectors / chaos burst | raw-ingest (`sentinel-raw-ingest`) | normalize + persist (→ outbox) |
+| `events.normalized` | outbox relay | detection (`sentinel-detection`), analytics (`sentinel-analytics`) | run rules; counters + baselines |
+| `alerts` | detection | correlation (`sentinel-correlation`) | correlate alerts into incidents |
+| `incidents.updates` | correlation | notification (`sentinel-notification`) | notify on HIGH/CRITICAL |
+| `events.retry` | any failing consumer | retry (`sentinel-retry`) | exponential-backoff re-dispatch |
+| `events.dlq` | retry (exhausted) | dlq (`sentinel-dlq`) | persist dead letters for replay |
+
+Reliability: **outbox** (no loss across crashes), **idempotency** via `processed_messages`
+(duplicate delivery is a no-op), **retry→DLQ** with manual offset commits (poison never blocks a
+partition). Admin surface: `GET /api/admin/pipeline-status`, `GET /api/admin/dlq` +
+`POST /api/admin/dlq/{id}/replay` + `/replay-all`, and chaos hooks
+`POST /api/admin/chaos/{pause,resume,burst}` (all ADMIN-only, audit-logged). Metrics (publish/consume
+counts, consumer lag, processing time, retry/DLQ counts, outbox backlog) are exposed via Actuator.
+The React **Pipeline** page (ADMIN) shows the status card, DLQ table and chaos controls.
+
+**Chaos demo & benchmark** (backend up with Kafka enabled):
+
+```bash
+# pause a consumer, burst N events, watch lag, resume, verify zero loss / zero duplicates
+ADMIN_USER=admin ADMIN_PASS='Admin@123' scripts/chaos-demo.sh 2000
+
+# compare sync vs Kafka ingest (run per mode; see docs/performance.md for numbers)
+MODE=kafka N=10000 scripts/benchmark.sh
+```
 
 ### Redis: caching, rate limiting & resilient fallback
 
