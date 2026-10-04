@@ -233,6 +233,19 @@ Interactive docs with a "Bearer" auth button: `/swagger-ui.html`.
 | GET/POST | `/api/admin/pending[/{id}/approve|reject]` | ADMIN |
 | GET/POST | `/api/admin/sessions/{userId}[/revoke]` · `/api/admin/timeline` | ADMIN |
 
+### ML risk model (hybrid)
+
+A Python **ML scoring service** (`ml/`, FastAPI + scikit-learn + SHAP) trains IsolationForest +
+GradientBoosting models and serves `POST /score` (features → `{score, model_version, top_features}`).
+The Java `MlScoringClient` (resilient HTTP impl with timeout/retry/circuit breaker, NoOp fallback,
+behind `ml.enabled`) feeds an **`MlRiskFactor`** into the risk pipeline with a **capped** weight — the
+model augments but never overrides the hard rules — and the SHAP reasons + model version appear in the
+incident waterfall. The same factor plugs into the admin-risk engine; a scheduled **drift monitor**
+raises an alert when live feature stats diverge from training. Shared feature spec:
+[docs/ml-features.md](docs/ml-features.md). Rules-only vs model vs hybrid:
+[docs/ml-evaluation.md](docs/ml-evaluation.md) — on held-out data rules-only recall ≈ 0.65 vs
+model/hybrid ≈ 1.00. Run the service: `cd ml && uvicorn app:app --port 8000` (see [ml/README.md](ml/README.md)).
+
 ### Multi-site & admin-action risk
 
 An org has multiple **sites**; events/incidents/rules are site-tagged and ingestion authenticates
@@ -283,3 +296,4 @@ All responses use the `ApiResponse` envelope `{ success, data, error, timestamp 
 - [Detection rules & simulator](docs/detection-rules.md)
 - [Risk model & correlation](docs/risk-model.md)
 - [Multi-site & admin-action risk](docs/admin-risk.md)
+- [ML feature spec](docs/ml-features.md) · [ML evaluation](docs/ml-evaluation.md) · [ML service](ml/README.md)
