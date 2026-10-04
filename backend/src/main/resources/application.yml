@@ -22,6 +22,14 @@ sentinel:
   security:
     max-failed-logins: 5
     lockout-minutes: 15
+  ml:
+    enabled: ${ML_ENABLED:false}
+    base-url: ${ML_BASE_URL:http://localhost:8000}
+    timeout-ms: 800
+    max-retries: 1
+    weight-cap: 30
+    drift-sigma-threshold: 3.0
+    drift-cron: "0 */15 * * * *"
   detection:
     enabled: true
     max-linked-events: 100
