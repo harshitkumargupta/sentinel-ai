@@ -51,7 +51,7 @@ public class SecurityEvent {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false,
-            columnDefinition = "enum('FAILED_LOGIN','BRUTE_FORCE','SUSPICIOUS_LOGIN','API_ABUSE','ABNORMAL_ACCESS','HONEYTOKEN_ACCESS','OTHER')")
+            columnDefinition = "enum('FAILED_LOGIN','BRUTE_FORCE','SUSPICIOUS_LOGIN','API_ABUSE','ABNORMAL_ACCESS','HONEYTOKEN_ACCESS','OTHER','PROMPT_INJECTION')")
     private EventType eventType;
 
     @Enumerated(EnumType.STRING)

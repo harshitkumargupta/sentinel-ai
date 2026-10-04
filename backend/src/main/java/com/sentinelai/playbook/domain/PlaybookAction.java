@@ -48,6 +48,16 @@ public class PlaybookAction {
     @Column(name = "action_type", nullable = false, length = 100)
     private String actionType;
 
+    @Column(name = "target_ref", length = 255)
+    private String targetRef;
+
+    @Column(length = 1000)
+    private String reason;
+
+    /** The AI analysis this action was proposed from (nullable; SET NULL on analysis delete). */
+    @Column(name = "analysis_id")
+    private Long analysisId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "enum('PROPOSED','APPROVED','EXECUTED','ROLLED_BACK')")
     private PlaybookActionStatus status;

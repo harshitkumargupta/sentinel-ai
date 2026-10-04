@@ -32,6 +32,11 @@ sentinel:
     # ingestion degrades gracefully to the synchronous path. Set KAFKA_ENABLED=false to force sync.
     enabled: ${KAFKA_ENABLED:true}
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  ai:
+    # Dev enables AI with the deterministic fake provider (no API key needed). For a real model set
+    # AI_PROVIDER=http and export LLM_API_KEY.
+    enabled: ${AI_ENABLED:true}
+    provider: ${AI_PROVIDER:fake}
 
 logging:
   level:

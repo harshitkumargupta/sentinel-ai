@@ -11,5 +11,6 @@ public enum EventType {
     API_ABUSE,
     ABNORMAL_ACCESS,
     HONEYTOKEN_ACCESS,
-    OTHER
+    OTHER,
+    PROMPT_INJECTION
 }

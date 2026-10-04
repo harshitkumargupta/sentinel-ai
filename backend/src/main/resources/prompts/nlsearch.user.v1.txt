@@ -1,0 +1,5 @@
+Translate this search request into the JSON filter (untrusted text follows the marker):
+
+{{data}}
+
+Return only the JSON filter object.

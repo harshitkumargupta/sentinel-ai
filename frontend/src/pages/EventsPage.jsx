@@ -3,10 +3,11 @@ import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import { listEvents } from '../services/events.service.js';
+import { nlSearch } from '../services/ai.service.js';
 import { messageFromError } from '../services/errors.js';
 
 const EVENT_TYPES = ['FAILED_LOGIN', 'BRUTE_FORCE', 'SUSPICIOUS_LOGIN', 'API_ABUSE',
-  'ABNORMAL_ACCESS', 'HONEYTOKEN_ACCESS', 'OTHER'];
+  'ABNORMAL_ACCESS', 'HONEYTOKEN_ACCESS', 'OTHER', 'PROMPT_INJECTION'];
 const SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export default function EventsPage() {
@@ -15,6 +16,12 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState(null);
+
+  // Natural-language search: when a result is set it replaces the listing (and pauses live refresh).
+  const [nlQuery, setNlQuery] = useState('');
+  const [nlResult, setNlResult] = useState(null);
+  const [nlError, setNlError] = useState(null);
+  const [nlBusy, setNlBusy] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -29,18 +36,58 @@ export default function EventsPage() {
   }, [filters]);
 
   useEffect(() => {
+    if (nlResult) return undefined; // paused while showing NL results
     load();
     const t = setInterval(load, 10000); // live refresh
     return () => clearInterval(t);
-  }, [load]);
+  }, [load, nlResult]);
 
-  const rows = page?.content ?? [];
+  async function runNlSearch(e) {
+    e?.preventDefault();
+    if (!nlQuery.trim()) return;
+    setNlBusy(true);
+    setNlError(null);
+    try {
+      setNlResult(await nlSearch(nlQuery));
+    } catch (err) {
+      setNlError(messageFromError(err));
+      setNlResult(null);
+    } finally {
+      setNlBusy(false);
+    }
+  }
+
+  function clearNl() {
+    setNlResult(null);
+    setNlError(null);
+    setNlQuery('');
+  }
+
+  const rows = nlResult ? nlResult.results : (page?.content ?? []);
 
   return (
     <div className="app-shell">
       <NavBar />
       <main className="content">
         <h2>Events</h2>
+
+        <form className="filters" onSubmit={runNlSearch}>
+          <input className="nl-input" placeholder="Ask in plain language, e.g. 'critical brute force from 203.0.113.5 last 7 days'"
+                 value={nlQuery} onChange={(e) => setNlQuery(e.target.value)} />
+          <button type="submit" disabled={nlBusy}>{nlBusy ? 'Searching…' : 'Ask AI'}</button>
+          {nlResult && <button type="button" className="ghost" onClick={clearNl}>Clear</button>}
+        </form>
+        {nlError && <p className="error-text">{nlError}</p>}
+        {nlResult && (
+          <div className="chip-row">
+            <span className="muted small">Interpreted as:</span>
+            {Object.entries(nlResult.interpretedFilter).map(([k, v]) => (
+              <span key={k} className="chip">{k}: {v}</span>
+            ))}
+            <span className="muted small">{nlResult.total} match(es)</span>
+          </div>
+        )}
+
         <div className="filters">
           <input placeholder="IP" value={filters.ip} onChange={(e) => setFilters({ ...filters, ip: e.target.value })} />
           <input placeholder="User" value={filters.user} onChange={(e) => setFilters({ ...filters, user: e.target.value })} />
