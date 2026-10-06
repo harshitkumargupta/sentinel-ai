@@ -1,17 +1,21 @@
 # 🛡️ SentinelAI
 
+<!-- Replace OWNER with your GitHub org/user to activate the badges. -->
+[![CI](https://github.com/OWNER/sentinel-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/sentinel-ai/actions/workflows/ci.yml)
+[![Deploy](https://github.com/OWNER/sentinel-ai/actions/workflows/deploy.yml/badge.svg)](https://github.com/OWNER/sentinel-ai/actions/workflows/deploy.yml)
+
 An AI-powered **mini SOC (Security Operations Center)** platform — final-year capstone project.
 
 SentinelAI ingests security events, correlates them into incidents through a detection engine,
 scores risk, and gives analysts a dashboard to investigate — with AI assistance for triage and
 summarization in later phases.
 
-> **Status:** Phase 13 — SOAR-lite playbooks (human-approved, reversible response actions against
-> mock firewall/identity adapters), an analyst feedback → detection-tuning loop, and similar-past-
-> incident lookup. Phase 12's AI investigation pipeline (evidence validation, injection defense,
-> safe NL search) remains, optional behind `ai.enabled` with deterministic fallbacks. Kafka and
-> Redis remain optional with their own fallbacks. AWS is still intentionally **not** in yet.
-> See [`docs/playbooks.md`](docs/playbooks.md) for the response state machine and safety rules.
+> **Status:** Phase 15 — CI/CD + zero-cost deployment: GitHub Actions build/test/scan, images on
+> GHCR, a production Docker Compose stack behind Caddy (automatic HTTPS), an optional Cloudflare
+> Tunnel for a free public URL, and health-gated deploys with automatic rollback, backup/restore.
+> Builds on Phase 14 security hardening and the Phase 12–13 AI/SOAR features. AWS remains
+> intentionally **out** (see [ADR-003](docs/adr/ADR-003-zero-cost-deploy.md)); everything runs at
+> **$0**. See [`docs/deployment.md`](docs/deployment.md).
 
 ---
 
@@ -192,10 +196,10 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 12** — AI investigation (evidence validator, injection defense, safe NL search)
 - [x] **Phase 13** — SOAR-lite playbooks (human-approved response actions), analyst feedback → tuning loop, similar-incident lookup
 - [x] **Phase 14** — Security hardening (OWASP Top 10), static/dependency/dynamic scanning, threat model
-- [ ] **Phase 15** — Observability (Prometheus/Grafana dashboards)
-- [ ] **Phase 16** — Dockerize full stack
+- [x] **Phase 15** — CI/CD (GitHub Actions → GHCR), zero-cost deploy (Compose + Caddy + Cloudflare Tunnel), rollback/backup
+- [ ] **Phase 16** — Observability (Prometheus/Grafana dashboards)
 - [ ] **Phase 17** — Kubernetes manifests
-- [ ] **Phase 18** — AWS deployment & CI/CD to cloud
+- [ ] **Phase 18** — AWS deployment & managed CI/CD to cloud
 
 ---
 
@@ -485,3 +489,5 @@ See [`docs/security/`](docs/security/): [threat model](docs/security/threat-mode
 - [ML feature spec](docs/ml-features.md) · [ML evaluation](docs/ml-evaluation.md) · [ML service](ml/README.md)
 - [Caching benchmark (cached vs uncached)](docs/performance.md)
 - [SOAR-lite playbooks (state machine & safety rules)](docs/playbooks.md)
+- [Deployment (zero-cost: Compose + Caddy + Cloudflare Tunnel)](docs/deployment.md) · [ADR-003: zero-cost deploy](docs/adr/ADR-003-zero-cost-deploy.md)
+- [Security: threat model & scans](docs/security/threat-model.md)
