@@ -9,18 +9,18 @@
   /* Surfaces */
   --bg: #0b0f14;
   --bg-elev: #0f141b;
-  --panel: #161b22;
-  --panel-2: #1c232d;
-  --border: #30363d;
-  --border-strong: #3d4651;
+  --panel: #171d26;
+  --panel-2: #212a35;
+  --border: #3a4552;
+  --border-strong: #4d5b6b;
 
-  /* Text */
-  --text: #e6edf3;
-  --muted: #9aa7b4;
+  /* Text — higher contrast so muted text/labels are clearly readable (WCAG AA). */
+  --text: #f0f4f8;
+  --muted: #b9c4d0;
   --text-inverse: #0b0f14;
 
   /* Brand / accent */
-  --accent: #3b8eea;
+  --accent: #4d9bf0;
   --accent-strong: #2f81f7;
   --accent-contrast: #ffffff;
 
@@ -30,19 +30,19 @@
   --danger: #f85149;
   --info: #58a6ff;
 
-  /* Severity palette (bg + readable foreground) */
-  --sev-low: #2f81f7;        --sev-low-fg: #cfe3ff;
-  --sev-medium: #d29922;     --sev-medium-fg: #ffeec2;
-  --sev-high: #f0883e;       --sev-high-fg: #ffe0c7;
-  --sev-critical: #f85149;   --sev-critical-fg: #ffd3cf;
+  /* Severity palette — distinct, high-visibility hues (cyan→amber→orange→red). */
+  --sev-low: #38bdf8;        --sev-low-fg: #d6f1ff;
+  --sev-medium: #f0b429;     --sev-medium-fg: #fff2cc;
+  --sev-high: #ff8c42;       --sev-high-fg: #ffe4d1;
+  --sev-critical: #ff5a5f;   --sev-critical-fg: #ffd9db;
 
-  /* Chart categorical palette (color-blind-aware, brand-neutral) */
-  --chart-1: #3b8eea;
-  --chart-2: #2ea043;
-  --chart-3: #d29922;
-  --chart-4: #f0883e;
-  --chart-5: #a371f7;
-  --chart-6: #e85aad;
+  /* Chart categorical palette (color-blind-aware, distinct hues) */
+  --chart-1: #38bdf8;
+  --chart-2: #34d399;
+  --chart-3: #f0b429;
+  --chart-4: #ff8c42;
+  --chart-5: #a78bfa;
+  --chart-6: #f472b6;
 
   /* Spacing scale (4px base) */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-8: 48px;
