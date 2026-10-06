@@ -10,12 +10,13 @@ SentinelAI ingests security events, correlates them into incidents through a det
 scores risk, and gives analysts a dashboard to investigate — with AI assistance for triage and
 summarization in later phases.
 
-> **Status:** Phase 15 — CI/CD + zero-cost deployment: GitHub Actions build/test/scan, images on
-> GHCR, a production Docker Compose stack behind Caddy (automatic HTTPS), an optional Cloudflare
-> Tunnel for a free public URL, and health-gated deploys with automatic rollback, backup/restore.
-> Builds on Phase 14 security hardening and the Phase 12–13 AI/SOAR features. AWS remains
-> intentionally **out** (see [ADR-003](docs/adr/ADR-003-zero-cost-deploy.md)); everything runs at
-> **$0**. See [`docs/deployment.md`](docs/deployment.md).
+> **Status: v1.0.0** — feature-complete. Full pipeline (ingest → detect → correlate → risk → AI
+> triage → human-approved SOAR → audit), a React command center with Three.js visuals, OWASP
+> hardening, CI/CD to GHCR, zero-cost Compose deploy (Caddy + optional Cloudflare Tunnel), and
+> Prometheus/Grafana observability with k6 load tests and a seeded final evaluation. Everything runs
+> at **$0**; AWS is intentionally **out** ([ADR-003](docs/adr/ADR-003-zero-cost-deploy.md)).
+> See [deployment](docs/deployment.md) · [runbook](docs/runbook.md) · [demo](docs/demo-script.md) ·
+> [report](docs/report/report.md).
 
 ---
 
@@ -493,3 +494,51 @@ See [`docs/security/`](docs/security/): [threat model](docs/security/threat-mode
 - [Deployment (zero-cost: Compose + Caddy + Cloudflare Tunnel)](docs/deployment.md) · [ADR-003: zero-cost deploy](docs/adr/ADR-003-zero-cost-deploy.md)
 - [Security: threat model & scans](docs/security/threat-model.md)
 - [UI design system & Three.js visuals](docs/ui-design.md)
+- [Observability & SLOs](docs/slo.md) · [Runbook](docs/runbook.md) · [Demo script](docs/demo-script.md) · [Viva Q&A](docs/viva-qa.md)
+- [Load tests](load-tests/README.md) · [Final evaluation](docs/final-evaluation.md) · [Project report](docs/report/report.md) · [ADR index](docs/adr/README.md)
+
+---
+
+## Quick start (one command)
+
+```bash
+# Prod-like stack (build images locally, then deploy with health-gate + smoke test + auto-rollback):
+cp infrastructure/docker/.env.example infrastructure/docker/.env   # set secrets; IMAGE_BASE=sentinel-ai TAG=local
+docker build -t sentinel-ai-backend:local backend && \
+docker build -t sentinel-ai-frontend:local frontend && \
+IMAGE_BASE=sentinel-ai ./scripts/deploy.sh local                   # → http://localhost (admin bootstrap via .env)
+```
+
+Dev mode: `docker compose -f infrastructure/docker/docker-compose.yml up -d` then
+`cd backend && mvn spring-boot:run` and `cd frontend && npm run dev` (login `admin / Admin@123`).
+Observability: `docker compose -f infrastructure/docker/monitoring.yml up -d` → Grafana at :3000.
+
+## Screenshots
+
+| Command center | Attack globe + charts | Grafana |
+|---|---|---|
+| ![dashboard](docs/screenshots/02-dashboard.png) | ![light](docs/screenshots/03-dashboard-light.png) | ![grafana](docs/screenshots/05-grafana.png) |
+
+## Results (seeded, single 8 GB node — see limitations)
+
+| Metric | Value |
+|--------|-------|
+| Incident-level detection recall | 0.75 (6/8 seeded scenarios) |
+| Alert reduction (events → incidents) | ~98.6% |
+| Dashboard read throughput (cached) | ~1,237 req/s @ p95 94 ms |
+| Single event ingest latency | ~130 ms |
+| Kafka chaos (retry→DLQ→replay) | zero loss / zero duplicates |
+| Backend tests | 174 passing (Testcontainers) |
+| Lighthouse (dashboard, Low) | A11y 96 · Best-practices 96 · Perf ~82 |
+
+Details: [final evaluation](docs/final-evaluation.md) · [performance](docs/performance.md).
+
+## Contributing
+
+Branch `feature/*` from `develop`; Conventional Commits; `mvn clean verify` + `npm run build` must
+pass; open a PR into `develop`. `main` is releasable. See [docs/engineering-standards.md](docs/engineering-standards.md) for engineering
+standards.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

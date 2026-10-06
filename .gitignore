@@ -45,3 +45,5 @@ infrastructure/docker/.env
 # Deploy state & DB backups
 infrastructure/docker/.deploy-state
 backups/
+
+docs/perf/
