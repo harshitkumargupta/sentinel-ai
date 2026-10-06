@@ -28,4 +28,4 @@ export function severityForType(type) {
   return 'LOW';
 }
 
-export const SEV_HEX = { LOW: '#2f81f7', MEDIUM: '#d29922', HIGH: '#f0883e', CRITICAL: '#f85149' };
+export const SEV_HEX = { LOW: '#38bdf8', MEDIUM: '#f0b429', HIGH: '#ff8c42', CRITICAL: '#ff5a5f' };
