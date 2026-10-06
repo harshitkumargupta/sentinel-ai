@@ -44,3 +44,8 @@ export async function setFeedback(id, feedback) {
   const { data } = await api.patch(`/incidents/${id}/feedback`, { feedback });
   return data.data;
 }
+
+export async function getSimilar(id, limit = 5) {
+  const { data } = await api.get(`/incidents/${id}/similar`, { params: { limit } });
+  return data.data;
+}

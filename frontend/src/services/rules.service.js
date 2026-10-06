@@ -19,3 +19,8 @@ export async function backtestRule(id, body) {
   const { data } = await api.post(`/rules/${id}/backtest`, body);
   return data.data;
 }
+
+export async function getTuningSuggestions() {
+  const { data } = await api.get('/rules/tuning-suggestions');
+  return data.data;
+}

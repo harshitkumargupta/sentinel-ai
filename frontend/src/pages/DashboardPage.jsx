@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import NavBar from '../components/NavBar.jsx';
+import TuningCard from '../components/TuningCard.jsx';
 import { getSummary, getAlertReduction, getMitreCoverage } from '../services/dashboard.service.js';
 import { messageFromError } from '../services/errors.js';
 
@@ -40,6 +41,8 @@ export default function DashboardPage() {
             <p className="subtitle">{reduction.reductionPct}% fewer things to look at than raw events.</p>
           </section>
         )}
+
+        <TuningCard />
 
         {summary && (
           <section className="tiles">

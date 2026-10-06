@@ -10,6 +10,7 @@ import com.sentinelai.common.repository.OrganizationRepository;
 import com.sentinelai.event.repository.SecurityEventRepository;
 import com.sentinelai.incident.repository.IncidentRepository;
 import com.sentinelai.notification.repository.NotificationRepository;
+import com.sentinelai.playbook.repository.PlaybookActionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -50,12 +51,15 @@ public abstract class IntegrationTestSupport {
     @Autowired
     protected NotificationRepository notificationRepository;
     @Autowired
+    protected PlaybookActionRepository playbookActionRepository;
+    @Autowired
     protected PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void resetState() {
         refreshTokenRepository.deleteAll();
-        notificationRepository.deleteAll(); // FK RESTRICT -> clear before incidents
+        notificationRepository.deleteAll();     // FK RESTRICT -> clear before incidents
+        playbookActionRepository.deleteAll();    // FK RESTRICT -> clear before incidents
         incidentRepository.deleteAll();     // cascades incident_alerts / incident_events / timeline
         securityEventRepository.deleteAll();
         userRepository.deleteAll();

@@ -8,5 +8,8 @@ public enum PlaybookActionStatus {
     PROPOSED,
     APPROVED,
     EXECUTED,
-    ROLLED_BACK
+    ROLLED_BACK,
+    REJECTED,
+    FAILED,
+    EXPIRED
 }

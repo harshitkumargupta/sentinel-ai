@@ -9,6 +9,7 @@ import com.sentinelai.audit.service.AuditService;
 import com.sentinelai.auth.repository.UserRepository;
 import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.exception.NotFoundException;
+import com.sentinelai.playbook.PlaybookProperties;
 import com.sentinelai.playbook.domain.PlaybookAction;
 import com.sentinelai.playbook.domain.PlaybookActionStatus;
 import com.sentinelai.playbook.repository.PlaybookActionRepository;
@@ -17,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /** Lists, fetches and reviews AI analyses; approved recommendations become PROPOSED playbook actions. */
@@ -27,9 +30,11 @@ public class AnalysisService {
 
     private final AiAnalysisRepository analysisRepository;
     private final PlaybookActionRepository playbookActionRepository;
+    private final PlaybookProperties playbookProperties;
     private final UserRepository userRepository;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public List<AiDtos.AnalysisResponse> listForIncident(Long incidentId, AppUserPrincipal actor) {
@@ -62,13 +67,17 @@ public class AnalysisService {
                 "ai_analysis", analysisId, "{\"decision\":\"" + decision + "\"}", null);
 
         if (decision == AiDtos.ReviewRequest.Decision.APPROVE) {
-            proposeActions(analysis);
+            proposeActions(analysis, actor);
         }
         return AiDtos.AnalysisResponse.from(analysis, objectMapper);
     }
 
-    /** Turn the approved analysis' recommendations into PROPOSED playbook actions (execution is later). */
-    private void proposeActions(AiAnalysis analysis) {
+    /**
+     * Turn the approved analysis' recommendations into PROPOSED playbook actions (execution is a
+     * separate, human-approved step). The reviewing analyst becomes the proposer; the action's risk
+     * level is the incident severity, and the proposal expires after the configured window.
+     */
+    private void proposeActions(AiAnalysis analysis, AppUserPrincipal actor) {
         if (analysis.getOutput() == null) {
             return;
         }
@@ -82,13 +91,17 @@ public class AnalysisService {
         if (output.recommendations() == null) {
             return;
         }
+        var expiresAt = clock.instant().plus(playbookProperties.getExpiryMinutes(), ChronoUnit.MINUTES);
         for (AnalysisOutput.Recommendation r : output.recommendations()) {
             playbookActionRepository.save(PlaybookAction.builder()
                     .incident(analysis.getIncident())
+                    .proposedBy(userRepository.getReferenceById(actor.getUserId()))
                     .actionType(r.action())
                     .targetRef(r.target())
                     .reason(r.reason())
                     .analysisId(analysis.getId())
+                    .riskLevel(analysis.getIncident().getSeverity())
+                    .expiresAt(expiresAt)
                     .status(PlaybookActionStatus.PROPOSED)
                     .build());
         }

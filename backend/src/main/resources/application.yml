@@ -70,6 +70,13 @@ sentinel:
       ai-investigation: sentinel-ai-investigation
   rate-limit:
     enabled: true
+  playbook:
+    expiry-minutes: ${PLAYBOOK_EXPIRY_MINUTES:30}
+    adapter-timeout-ms: 2000
+    adapter-max-retries: 2
+  tuning:
+    min-samples: ${TUNING_MIN_SAMPLES:20}
+    max-threshold-delta: 5
   ai:
     # Master feature flag. Off → every AI feature returns a deterministic fallback, no LLM contacted.
     enabled: ${AI_ENABLED:false}
