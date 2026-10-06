@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { pixelRatioCap } from './webgl.js';
 
 const LEVEL_COLOR = {
-  LOW: '#2f81f7', MEDIUM: '#d29922', HIGH: '#f0883e', CRITICAL: '#f85149',
+  LOW: '#38bdf8', MEDIUM: '#f0b429', HIGH: '#ff8c42', CRITICAL: '#ff5a5f',
 };
 const LEVEL_SPEED = { LOW: 0.6, MEDIUM: 1.1, HIGH: 1.8, CRITICAL: 2.6 };
 
