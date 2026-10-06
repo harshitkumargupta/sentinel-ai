@@ -47,4 +47,9 @@ public interface SecurityEventRepository
                             @Param("type") EventType type,
                             @Param("sourceIp") String sourceIp,
                             @Param("since") Instant since);
+
+    @Query("""
+            select distinct e.username from SecurityEvent e
+            where e.org.id = :orgId and e.sourceIp = :ip and e.username is not null""")
+    List<String> distinctUsernamesByOrgAndIp(@Param("orgId") Long orgId, @Param("ip") String ip);
 }

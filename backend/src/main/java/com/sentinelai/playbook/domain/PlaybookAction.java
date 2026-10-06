@@ -1,6 +1,7 @@
 package com.sentinelai.playbook.domain;
 
 import com.sentinelai.auth.domain.User;
+import com.sentinelai.common.domain.Severity;
 import com.sentinelai.incident.domain.Incident;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -45,6 +46,10 @@ public class PlaybookAction {
     @JoinColumn(name = "incident_id", nullable = false)
     private Incident incident;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "proposed_by")
+    private User proposedBy;
+
     @Column(name = "action_type", nullable = false, length = 100)
     private String actionType;
 
@@ -59,19 +64,45 @@ public class PlaybookAction {
     private Long analysisId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "enum('PROPOSED','APPROVED','EXECUTED','ROLLED_BACK')")
+    @Column(nullable = false,
+            columnDefinition = "enum('PROPOSED','APPROVED','EXECUTED','ROLLED_BACK','REJECTED','FAILED','EXPIRED')")
     private PlaybookActionStatus status;
+
+    /** Risk level of this action (from the incident severity); drives approver rules. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level", columnDefinition = "enum('LOW','MEDIUM','HIGH','CRITICAL')")
+    private Severity riskLevel;
+
+    @Column(name = "expires_at")
+    private Instant expiresAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "dry_run_result", columnDefinition = "json")
     private String dryRunResult;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "before_state", columnDefinition = "json")
+    private String beforeState;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "after_state", columnDefinition = "json")
+    private String afterState;
+
+    @Column(name = "failure_reason", length = 1000)
+    private String failureReason;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "approved_by")
     private User approvedBy;
 
+    @Column(name = "approved_at")
+    private Instant approvedAt;
+
     @Column(name = "executed_at")
     private Instant executedAt;
+
+    @Column(name = "rolled_back_at")
+    private Instant rolledBackAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

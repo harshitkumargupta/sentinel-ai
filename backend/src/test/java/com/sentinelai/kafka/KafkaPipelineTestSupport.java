@@ -2,6 +2,7 @@ package com.sentinelai.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.alert.repository.AlertRepository;
+import com.sentinelai.playbook.repository.PlaybookActionRepository;
 import com.sentinelai.auth.domain.Role;
 import com.sentinelai.auth.domain.User;
 import com.sentinelai.auth.repository.UserRepository;
@@ -59,6 +60,7 @@ abstract class KafkaPipelineTestSupport {
     @Autowired protected OutboxRepository outboxRepository;
     @Autowired protected ProcessedMessageRepository processedMessageRepository;
     @Autowired protected DlqMessageRepository dlqMessageRepository;
+    @Autowired protected PlaybookActionRepository playbookActionRepository;
     @Autowired protected ObjectMapper objectMapper;
     @Autowired protected PasswordEncoder passwordEncoder;
 
@@ -66,6 +68,7 @@ abstract class KafkaPipelineTestSupport {
     void resetPipelineState() {
         // Clean mutable tables (consumers may still settle; tests use unique keys to stay isolated).
         notificationRepository.deleteAll();
+        playbookActionRepository.deleteAll(); // FK RESTRICT -> clear before incidents
         incidentRepository.deleteAll();
         alertRepository.deleteAll();
         securityEventRepository.deleteAll();

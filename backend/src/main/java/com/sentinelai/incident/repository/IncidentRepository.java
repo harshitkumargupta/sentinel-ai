@@ -2,6 +2,7 @@ package com.sentinelai.incident.repository;
 
 import com.sentinelai.common.domain.Severity;
 import com.sentinelai.incident.domain.Incident;
+import com.sentinelai.incident.domain.IncidentFeedback;
 import com.sentinelai.incident.domain.IncidentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -29,4 +30,8 @@ public interface IncidentRepository
 
     Optional<Incident> findFirstByOrg_IdAndCorrelationKeyAndStatusInOrderByIdDesc(
             Long orgId, String correlationKey, Collection<IncidentStatus> statuses);
+
+    List<Incident> findByOrg_IdAndFeedbackIn(Long orgId, Collection<IncidentFeedback> feedback);
+
+    List<Incident> findByOrg_Id(Long orgId);
 }

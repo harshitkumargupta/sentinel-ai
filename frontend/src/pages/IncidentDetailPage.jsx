@@ -7,6 +7,8 @@ import MitreChip from '../components/MitreChip.jsx';
 import RiskWaterfall from '../components/RiskWaterfall.jsx';
 import StorylineGraph from '../components/StorylineGraph.jsx';
 import AiInvestigationPanel from '../components/AiInvestigationPanel.jsx';
+import ActionsPanel from '../components/ActionsPanel.jsx';
+import SimilarIncidentsPanel from '../components/SimilarIncidentsPanel.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   getIncident, getRisk, getTimeline, getEvidence, getGraph, updateStatus, setFeedback,
@@ -81,6 +83,10 @@ export default function IncidentDetailPage() {
               {canTriage && (
                 <AiInvestigationPanel incidentId={id} canReview={canTriage} onHighlight={setHighlighted} />
               )}
+
+              {canTriage && <ActionsPanel incidentId={id} canAct={canTriage} />}
+
+              <SimilarIncidentsPanel incidentId={id} />
 
               <section className="panel">
                 <h3>Risk breakdown</h3>

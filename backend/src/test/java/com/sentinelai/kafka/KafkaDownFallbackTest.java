@@ -49,12 +49,14 @@ class KafkaDownFallbackTest {
     @Autowired private IncidentRepository incidentRepository;
     @Autowired private SecurityEventRepository securityEventRepository;
     @Autowired private NotificationRepository notificationRepository;
+    @Autowired private com.sentinelai.playbook.repository.PlaybookActionRepository playbookActionRepository;
     @Autowired private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
         when(publisher.isHealthy()).thenReturn(false); // broker unreachable
         notificationRepository.deleteAll();
+        playbookActionRepository.deleteAll(); // FK RESTRICT -> clear before incidents
         incidentRepository.deleteAll();
         alertRepository.deleteAll();
         securityEventRepository.deleteAll();

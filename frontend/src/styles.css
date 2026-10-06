@@ -410,3 +410,7 @@ input[type="range"] { vertical-align: middle; }
 .evidence-chip:hover { background: var(--accent); color: #fff; }
 .row-highlight { background: rgba(47, 129, 247, 0.18); }
 .nl-input { flex: 1 1 320px; min-width: 240px; }
+
+/* ---- SOAR actions ---- */
+.action-row { border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin: 8px 0; background: var(--bg); }
+.action-row .filters { margin-top: 6px; }

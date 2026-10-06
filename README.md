@@ -6,10 +6,12 @@ SentinelAI ingests security events, correlates them into incidents through a det
 scores risk, and gives analysts a dashboard to investigate — with AI assistance for triage and
 summarization in later phases.
 
-> **Status:** Phase 12 — AI investigation pipeline: evidence-validated incident analysis, prompt-
-> injection defense, and safe natural-language search. AI is optional and behind `ai.enabled`; with
-> it off (or the model unavailable/over budget) every AI feature returns a deterministic fallback.
-> Kafka and Redis remain optional with their own fallbacks. AWS is still intentionally **not** in yet.
+> **Status:** Phase 13 — SOAR-lite playbooks (human-approved, reversible response actions against
+> mock firewall/identity adapters), an analyst feedback → detection-tuning loop, and similar-past-
+> incident lookup. Phase 12's AI investigation pipeline (evidence validation, injection defense,
+> safe NL search) remains, optional behind `ai.enabled` with deterministic fallbacks. Kafka and
+> Redis remain optional with their own fallbacks. AWS is still intentionally **not** in yet.
+> See [`docs/playbooks.md`](docs/playbooks.md) for the response state machine and safety rules.
 
 ---
 
@@ -188,7 +190,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 10** — Redis (caching, rate limiting, sliding windows), behavioral baselines, attack-storyline graph
 - [x] **Phase 11** — Kafka event-driven pipeline (outbox, idempotency, retry + DLQ, chaos demo)
 - [x] **Phase 12** — AI investigation (evidence validator, injection defense, safe NL search)
-- [ ] **Phase 13** — AI: natural-language querying
+- [x] **Phase 13** — SOAR-lite playbooks (human-approved response actions), analyst feedback → tuning loop, similar-incident lookup
 - [ ] **Phase 14** — Observability (Prometheus/Grafana dashboards)
 - [ ] **Phase 15** — Hardening & security review
 - [ ] **Phase 16** — Dockerize full stack
@@ -247,6 +249,10 @@ Interactive docs with a "Bearer" auth button: `/swagger-ui.html`.
 | GET/POST | `/api/admin/sessions/{userId}[/revoke]` · `/api/admin/timeline` | ADMIN |
 | GET | `/api/incidents/{id}/graph` (attack-storyline graph) | VIEWER+ |
 | GET | `/api/admin/cache-stats` (cache hit/miss/hit-rate) | ADMIN |
+| GET | `/api/incidents/{id}/actions` · `/api/incidents/{id}/similar?limit=` | VIEWER+ |
+| POST | `/api/actions/{id}/dry-run` · `/approve` · `/reject` · `/execute` · `/rollback` | ANALYST+ (HIGH/CRITICAL approve: ADMIN) |
+| GET | `/api/rules/{id}/tuning-suggestions` · `/api/rules/tuning-suggestions` | ANALYST+ |
+| GET | `/api/evaluation/response-time` (alert → approved-action latency) | ANALYST+ |
 
 ### ML risk model (hybrid)
 
@@ -400,6 +406,31 @@ interactive SVG graph with click-to-inspect, a kill-chain strip, and a time slid
 attack. Example (credential stuffing): 8 users → one source IP, kill-chain stage 3 (Credential
 Access, T1110.004).
 
+### SOAR-lite playbooks, tuning loop & similar incidents (Phase 13)
+
+**Playbooks.** AI recommendations become **PROPOSED** `playbook_actions`
+(`block_ip`, `disable_user`, `force_password_reset`, `revoke_sessions`, `add_watchlist`) that run
+against **mock firewall/identity adapters** behind interfaces. Lifecycle
+`PROPOSED → APPROVED → EXECUTED → ROLLED_BACK` (plus `REJECTED`/`FAILED`/`EXPIRED`); illegal
+transitions throw `InvalidStateTransitionException`. A **dry-run** previews the change and blast
+radius without changing state; **protected targets** (admins, allow-listed IPs, the internal
+network) are never acted on; destructive actions must be on a config allow-list; HIGH/CRITICAL
+actions need an **ADMIN approver who differs from the proposer** and passes the admin-risk guard;
+approvals **expire** after `sentinel.playbook.expiry-minutes`; execute is **idempotent** and retries
+the adapter; every transition is audited (before/after) and added to the incident timeline. See
+[`docs/playbooks.md`](docs/playbooks.md).
+
+**Feedback → tuning.** From analyst `TRUE_POSITIVE`/`FALSE_POSITIVE` labels, `GET
+/api/rules/{id}/tuning-suggestions` replays the existing backtest at higher thresholds and reports,
+e.g. *"raise threshold 5 → 8: removes 60% of false positives, loses 0 true positives"* — only above
+a configured minimum sample size, **never auto-applied** (an admin applies via the audited rule-edit
+path). The dashboard ranks rules by FP rate with an **Apply** button.
+
+**Similar incidents.** `SimilarityService` (default: feature-vector cosine over rule types, MITRE
+techniques, entity type, severity, hour bucket and event-type counts, scoped per org, cached with
+invalidation) powers `GET /api/incidents/{id}/similar`, returning top matches with score, shared
+features, how each was resolved, and a "what worked before" hint when the same action resolved them.
+
 All responses use the `ApiResponse` envelope `{ success, data, error, timestamp }`.
 
 ---
@@ -416,3 +447,4 @@ All responses use the `ApiResponse` envelope `{ success, data, error, timestamp 
 - [Multi-site & admin-action risk](docs/admin-risk.md)
 - [ML feature spec](docs/ml-features.md) · [ML evaluation](docs/ml-evaluation.md) · [ML service](ml/README.md)
 - [Caching benchmark (cached vs uncached)](docs/performance.md)
+- [SOAR-lite playbooks (state machine & safety rules)](docs/playbooks.md)
