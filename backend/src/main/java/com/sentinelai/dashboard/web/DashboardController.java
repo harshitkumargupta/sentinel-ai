@@ -37,4 +37,10 @@ public class DashboardController {
     public ApiResponse<List<MitreCoverageItem>> mitreCoverage(@AuthenticationPrincipal AppUserPrincipal actor) {
         return ApiResponse.ok(dashboardService.mitreCoverage(actor));
     }
+
+    @GetMapping("/geo-flows")
+    public ApiResponse<List<com.sentinelai.dashboard.dto.GeoFlowItem>> geoFlows(
+            @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(dashboardService.geoFlows(actor));
+    }
 }

@@ -14,3 +14,8 @@ export async function getMitreCoverage() {
   const { data } = await api.get('/dashboard/mitre-coverage');
   return data.data;
 }
+
+export async function getGeoFlows() {
+  const { data } = await api.get('/dashboard/geo-flows');
+  return data.data;
+}

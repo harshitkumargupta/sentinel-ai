@@ -3,16 +3,24 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
+import { ThemeProvider } from './theme/ThemeProvider.jsx';
+import { ToastProvider } from './components/ui/Toast.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import './styles.css';
+import './theme/tokens.css'; // imported last so the token palette + light theme take precedence
+import './theme/ui.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>,
