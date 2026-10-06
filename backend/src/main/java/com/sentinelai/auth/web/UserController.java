@@ -32,8 +32,8 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public ApiResponse<List<UserResponse>> list() {
-        return ApiResponse.ok(userService.list());
+    public ApiResponse<List<UserResponse>> list(@AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(userService.list(actor));
     }
 
     @PostMapping

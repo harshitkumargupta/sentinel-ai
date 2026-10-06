@@ -1,0 +1,22 @@
+# gitleaks configuration for SentinelAI.
+# Extends the stock rules and allow-lists the KNOWN dev/test-only secrets that intentionally live
+# in the repo (and nowhere near production). Run: `gitleaks detect --config .gitleaks.toml`.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dev/test-only, non-production secrets that are safe to commit"
+regexes = [
+  # Dev-only JWT secret in application-dev.yml
+  '''dev-only-sentinel-ai-secret-key-change-me-0123456789''',
+  # Test-only JWT secret in application-test.yml
+  '''test-only-sentinel-ai-secret-key-0123456789-abcdefghij''',
+  # Dev/test DB password default (local MySQL / compose)
+  '''(?i)(DB_PASSWORD|password):\s*sentinel''',
+]
+paths = [
+  '''.*application-dev\.yml''',
+  '''.*application-test\.yml''',
+  '''.*/test/.*''',
+]

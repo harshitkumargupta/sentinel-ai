@@ -26,9 +26,12 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
+    private final PasswordPolicy passwordPolicy;
+
     @Transactional(readOnly = true)
-    public List<UserResponse> list() {
-        return userRepository.findAll().stream().map(UserResponse::from).toList();
+    public List<UserResponse> list(AppUserPrincipal actor) {
+        // Tenant isolation: an admin only ever sees their own org's users.
+        return userRepository.findByOrg_Id(actor.getOrgId()).stream().map(UserResponse::from).toList();
     }
 
     @Transactional
@@ -39,6 +42,7 @@ public class UserService {
         if (userRepository.existsByEmail(req.email())) {
             throw new ConflictException("Email already registered");
         }
+        passwordPolicy.validate(req.password());
         User user = userRepository.save(User.builder()
                 .org(organizationRepository.getReferenceById(actor.getOrgId()))
                 .username(req.username())
@@ -55,7 +59,7 @@ public class UserService {
 
     @Transactional
     public UserResponse update(Long id, UpdateUserRequest req, AppUserPrincipal actor) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndOrg_Id(id, actor.getOrgId())
                 .orElseThrow(() -> new NotFoundException("User not found: " + id));
         if (req.email() != null) {
             user.setEmail(req.email());
@@ -75,7 +79,7 @@ public class UserService {
 
     @Transactional
     public UserResponse disable(Long id, AppUserPrincipal actor) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndOrg_Id(id, actor.getOrgId())
                 .orElseThrow(() -> new NotFoundException("User not found: " + id));
         user.setEnabled(false);
         userRepository.save(user);

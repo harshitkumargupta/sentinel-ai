@@ -36,6 +36,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final com.sentinelai.auth.security.JwtProperties jwtProperties;
     private final AuditService auditService;
     private final SecurityEventRecorder eventRecorder;
 
@@ -43,8 +44,6 @@ public class AuthService {
     private int maxFailedLogins;
     @Value("${sentinel.security.lockout-minutes:15}")
     private long lockoutMinutes;
-    @Value("${sentinel.jwt.refresh-token-ttl:604800000}")
-    private long refreshTtlMs;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -97,17 +96,32 @@ public class AuthService {
                 UserResponse.from(user));
     }
 
-    @Transactional
+    // noRollbackFor: on reuse detection we revoke the whole token family and THEN throw 401 — the
+    // revocation must commit, not roll back with the exception.
+    @Transactional(noRollbackFor = BadCredentialsException.class)
     public TokenResponse refresh(String rawRefreshToken) {
         String hash = Hashing.sha256Hex(rawRefreshToken);
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
 
-        if (stored.isRevoked() || stored.getExpiresAt().isBefore(Instant.now())) {
+        User user = stored.getUser();
+
+        // Reuse detection: a token that was already rotated (revoked) is being presented again.
+        // This is the classic stolen-refresh-token signal — revoke the entire family and refuse.
+        if (stored.isRevoked()) {
+            int revoked = refreshTokenRepository.revokeAllForUser(user.getId());
+            eventRecorder.record(user.getOrg().getId(), EventType.FAILED_LOGIN, Severity.HIGH,
+                    user.getUsername(), null, "auth/refresh",
+                    "{\"reason\":\"REFRESH_TOKEN_REUSE\",\"revokedFamily\":" + revoked + "}");
+            auditService.record(user.getOrg().getId(), user.getId(), "REFRESH_REUSE_DETECTED", "user",
+                    user.getId(), "{\"revokedFamily\":" + revoked + "}", null);
+            throw new BadCredentialsException("Invalid refresh token");
+        }
+
+        if (stored.getExpiresAt().isBefore(Instant.now())) {
             throw new BadCredentialsException("Refresh token expired or revoked");
         }
 
-        User user = stored.getUser();
         // Rotate: revoke the used token, issue a fresh pair.
         stored.setRevoked(true);
         refreshTokenRepository.save(stored);
@@ -165,7 +179,7 @@ public class AuthService {
         refreshTokenRepository.save(RefreshToken.builder()
                 .user(user)
                 .tokenHash(Hashing.sha256Hex(raw))
-                .expiresAt(Instant.now().plusMillis(refreshTtlMs))
+                .expiresAt(Instant.now().plusMillis(jwtProperties.getRefreshTokenTtl()))
                 .revoked(false)
                 .build());
         return raw;

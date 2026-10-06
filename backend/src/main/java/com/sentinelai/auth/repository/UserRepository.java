@@ -20,4 +20,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     List<User> findByRole(Role role);
+
+    // Org-scoped lookups (tenant isolation for admin user management).
+    List<User> findByOrg_Id(Long orgId);
+
+    Optional<User> findByIdAndOrg_Id(Long id, Long orgId);
 }

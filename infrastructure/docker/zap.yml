@@ -1,0 +1,24 @@
+# OWASP ZAP baseline scan (DAST) against a running SentinelAI backend.
+#
+# Start the app first (host :8080), then:
+#   mkdir -p reports/zap
+#   docker compose -f infrastructure/docker/zap.yml run --rm zap
+#
+# The baseline scan is passive (spider + passive rules); it writes an HTML + JSON report to
+# reports/zap/ and exits non-zero if WARN/FAIL rules trip (triage in docs/security/scan-results.md).
+# ZAP_TARGET overrides the target (default: the host gateway on :8080).
+services:
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: sentinel-zap
+    network_mode: host
+    environment:
+      ZAP_TARGET: ${ZAP_TARGET:-http://localhost:8080}
+    volumes:
+      - ../../reports/zap:/zap/wrk:rw
+    command: >
+      zap-baseline.py
+      -t ${ZAP_TARGET:-http://localhost:8080}
+      -r zap-baseline.html
+      -J zap-baseline.json
+      -I

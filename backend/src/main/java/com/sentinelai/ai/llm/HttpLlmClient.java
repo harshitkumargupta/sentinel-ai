@@ -27,14 +27,38 @@ public class HttpLlmClient implements LlmClient {
     private final ObjectMapper objectMapper;
     private final HttpClient http;
     private final String apiKey;
+    private final URI endpoint;
 
     public HttpLlmClient(AiProperties props, ObjectMapper objectMapper) {
         this.props = props;
         this.objectMapper = objectMapper;
         this.http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(props.getTimeoutMs()))
+                // SSRF hardening: never silently follow a redirect to another host.
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
         this.apiKey = System.getenv(API_KEY_ENV);
+        this.endpoint = resolveEndpoint(props.getBaseUrl());
+    }
+
+    /**
+     * SSRF guard: the only outbound URL this client ever issues is derived from the configured
+     * {@code sentinel.ai.base-url}. We resolve it once, require an http(s) scheme and a real host,
+     * and forbid plain-http to anything but localhost (a dev convenience).
+     */
+    private static URI resolveEndpoint(String baseUrl) {
+        URI uri = URI.create(baseUrl + "/chat/completions");
+        String scheme = uri.getScheme();
+        String host = uri.getHost();
+        if (host == null || scheme == null) {
+            throw new IllegalStateException("sentinel.ai.base-url is not a valid absolute URL: " + baseUrl);
+        }
+        boolean https = "https".equalsIgnoreCase(scheme);
+        boolean localhost = "localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host);
+        if (!https && !("http".equalsIgnoreCase(scheme) && localhost)) {
+            throw new IllegalStateException("sentinel.ai.base-url must use https (http allowed only for localhost)");
+        }
+        return uri;
     }
 
     @Override
@@ -54,7 +78,7 @@ public class HttpLlmClient implements LlmClient {
             messages.addObject().put("role", "user").put("content", request.userPrompt());
 
             HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(props.getBaseUrl() + "/chat/completions"))
+                    .uri(endpoint)
                     .timeout(Duration.ofMillis(props.getTimeoutMs()))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey)
