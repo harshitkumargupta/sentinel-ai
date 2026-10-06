@@ -6,6 +6,7 @@ import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
 import RiskWaterfall from '../components/RiskWaterfall.jsx';
 import StorylineGraph from '../components/StorylineGraph.jsx';
+import Storyline3DLazy from '../components/three/Storyline3DLazy.jsx';
 import AiInvestigationPanel from '../components/AiInvestigationPanel.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
 import SimilarIncidentsPanel from '../components/SimilarIncidentsPanel.jsx';
@@ -30,6 +31,7 @@ export default function IncidentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [highlighted, setHighlighted] = useState([]);
+  const [view3d, setView3d] = useState(false); // 2D storyline is the default; 3D is opt-in
 
   const load = useCallback(async () => {
     setError(null);
@@ -94,9 +96,17 @@ export default function IncidentDetailPage() {
               </section>
 
               <section className="panel">
-                <h3>Attack storyline</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h3>Attack storyline</h3>
+                  {data.graph && (data.graph.nodes?.length ?? 0) > 0 && (
+                    <button className="ui-btn ui-btn--sm" onClick={() => setView3d((v) => !v)}
+                      aria-pressed={view3d}>{view3d ? '2D view' : '3D view'}</button>
+                  )}
+                </div>
                 {data.graph && (data.graph.nodes?.length ?? 0) > 0
-                  ? <StorylineGraph graph={data.graph} />
+                  ? (view3d
+                      ? <Storyline3DLazy graph={data.graph} />
+                      : <StorylineGraph graph={data.graph} />)
                   : <p className="muted">No graph data.</p>}
               </section>
 

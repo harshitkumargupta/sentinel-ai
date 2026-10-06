@@ -3,7 +3,7 @@ import { test } from '@playwright/test';
 // Generates the report/demo screenshots into docs/screenshots/. Run:
 //   npx playwright test e2e/screenshots.spec.js
 const USER = process.env.ADMIN_USER || 'admin';
-const PASS = process.env.ADMIN_PASS || 'Admin@12345';
+const PASS = process.env.ADMIN_PASS || 'Admin@123';
 const OUT = '../docs/screenshots';
 
 async function login(page) {

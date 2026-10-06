@@ -72,15 +72,29 @@ Keyboard navigation with a visible focus ring (`:focus-visible`), ARIA roles/lab
 tabs, the command palette and tables, severity conveyed by icon+text (not color alone), and a
 text/table alternative for every 3D view. Motion is disabled under `prefers-reduced-motion`.
 
-## Testing
+## Testing (all executed, passing)
 
-- **Vitest + Testing Library** (`npm test`): shared components, the table sort/empty logic, the
-  command palette filtering, and the **3D fallback logic** (jsdom has no WebGL, so the wrappers must
-  render their 2D/static equivalents — asserted).
-- **Playwright** smoke (`e2e/`): login → dashboard → open incident → investigate → approve action,
-  plus the reduced-motion and WebGL-off paths. Run with `npx playwright test` (needs browsers
-  installed in the CI/dev environment).
+- **Vitest + Testing Library** (`npm test`): shared components, table sort/empty logic, command
+  palette filtering, and the **3D fallback logic** — **10/10 passing**.
+- **Playwright** smoke (`npm run e2e`): login → dashboard → open incident → investigate → approve,
+  plus the **reduced-motion** and **WebGL-off** paths — **3/3 passing** (Chromium). Screenshots via
+  `e2e/screenshots.spec.js` → `docs/screenshots/`.
+- **Lighthouse** (`node e2e/lighthouse.mjs`, authenticated, dashboard, **Low** quality, against the
+  production `vite preview` build): **Accessibility 96, Best-Practices 96, Performance ~82.**
+  Accessibility comfortably clears the ≥90 target; performance is a few points under the ≥85 target —
+  the residual cost is the on-page WebGL globe + Recharts on a data-dense dashboard (the globe is
+  deferred to idle and code-split, and the main chunk was reduced from 801 KB to 341 KB). The
+  WebGL-off/Off-quality fallback scores higher. Note: the preview must run on an origin in the API
+  CORS allow-list (default `http://localhost:5173`).
 
 ## Bundle (production build)
 
-The 3D engine is isolated from the main chunk — see the README UI section for the latest sizes.
+Route pages and Recharts are code-split; the three.js engine is isolated and loads only when a scene
+mounts:
+
+| Chunk | Raw | Gzip |
+|-------|-----|------|
+| main (`index`) | 341 KB | 114 KB |
+| three.js engine (`react-three-fiber`) | 803 KB | 217 KB (lazy) |
+| Recharts (`DashboardCharts`) | ~330 KB | ~95 KB (lazy) |
+| AttackGlobe / Storyline3D / ThreatCore scenes | 1–46 KB each | lazy |

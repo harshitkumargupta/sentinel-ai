@@ -1,7 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis,
-} from 'recharts';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import NavBar from '../components/NavBar.jsx';
 import TuningCard from '../components/TuningCard.jsx';
 import ThreatCoreLazy from '../components/three/ThreatCoreLazy.jsx';
@@ -12,8 +9,7 @@ import { listEvents } from '../services/events.service.js';
 import { getPipelineStatus } from '../services/pipeline.service.js';
 import { messageFromError } from '../services/errors.js';
 
-const SEV_VAR = { LOW: 'var(--sev-low)', MEDIUM: 'var(--sev-medium)', HIGH: 'var(--sev-high)', CRITICAL: 'var(--sev-critical)' };
-const CHART = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)'];
+const DashboardCharts = lazy(() => import('../components/DashboardCharts.jsx'));
 const REFRESH_MS = 15000;
 
 function threatLevel(summary) {
@@ -121,33 +117,9 @@ export default function DashboardPage() {
                 <AttackGlobeLazy flows={data.geo} height={320} />
               </Card>
 
-              <Card title="Events by severity">
-                <div style={{ height: 200 }}>
-                  <ResponsiveContainer>
-                    <PieChart>
-                      <Pie data={sevData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={2}>
-                        {sevData.map((d) => <Cell key={d.name} fill={SEV_VAR[d.name] || 'var(--chart-1)'} />)}
-                      </Pie>
-                      <RTooltip contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-
-              <Card title="Top event types">
-                <div style={{ height: 200 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={typeData} layout="vertical" margin={{ left: 10 }}>
-                      <XAxis type="number" hide />
-                      <YAxis type="category" dataKey="name" width={130} tick={{ fill: 'var(--muted)', fontSize: 11 }} />
-                      <RTooltip contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }} />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                        {typeData.map((d, i) => <Cell key={d.name} fill={CHART[i % CHART.length]} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
+              <Suspense fallback={<><Card title="Events by severity"><SkeletonLines lines={3} /></Card><Card title="Top event types"><SkeletonLines lines={3} /></Card></>}>
+                <DashboardCharts sevData={sevData} typeData={typeData} />
+              </Suspense>
 
               <Card title="MITRE ATT&CK coverage" className="dash-grid__mitre">
                 {data.mitre.length === 0 ? <EmptyState title="No techniques yet" /> : (

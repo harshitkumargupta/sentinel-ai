@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { useTheme } from '../../theme/ThemeProvider.jsx';
 import { hasWebGL, useCanvasActive } from '../../three/webgl.js';
 import ThreeErrorBoundary from '../../three/ThreeErrorBoundary.jsx';
@@ -34,7 +34,17 @@ export function GlobeTable({ flows }) {
 export default function AttackGlobeLazy({ flows, height = 360 }) {
   const { effectiveQuality } = useTheme();
   const { ref, active } = useCanvasActive();
-  const enabled = effectiveQuality !== 'off' && hasWebGL();
+  // Data-first: show the 2D table immediately and upgrade to the 3D globe when the browser is idle,
+  // so the ~200 KB three.js chunk never blocks first paint / interactivity.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const ric = window.requestIdleCallback || ((cb) => setTimeout(cb, 400));
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const id = ric(() => setReady(true), { timeout: 1500 });
+    return () => cancel(id);
+  }, []);
+
+  const enabled = ready && effectiveQuality !== 'off' && hasWebGL();
   const fallback = <GlobeTable flows={flows} />;
 
   return (
