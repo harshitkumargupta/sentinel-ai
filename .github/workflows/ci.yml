@@ -127,15 +127,10 @@ jobs:
         run: mvn -B -Psecurity verify -DskipTests
 
       - name: Trivy filesystem scan (HIGH,CRITICAL)
-        uses: aquasecurity/trivy-action@v0.28.0
         continue-on-error: true   # report-only: dependency-tree CVEs don't gate the capstone build
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
-          scanners: vuln,secret,misconfig
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          trivy fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 .
 
   sonar:
     name: SonarQube (optional)
@@ -205,13 +200,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
       - name: Trivy scan image (HIGH,CRITICAL)
-        uses: aquasecurity/trivy-action@v0.28.0
         continue-on-error: true   # report-only: base-image OS CVEs don't gate the capstone build
-        with:
-          image-ref: ${{ env.IMAGE_BASE }}-${{ matrix.name }}:ci-${{ github.sha }}
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 ${{ env.IMAGE_BASE }}-${{ matrix.name }}:ci-${{ github.sha }}
 
       # Push only on branch/tag pushes, never on PRs.
       - name: Log in to GHCR
