@@ -8,9 +8,20 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  # Reject oversized multipart uploads early.
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 2MB
 
 server:
   port: ${SERVER_PORT:8080}
+  # Request-size hardening: cap request-line/headers; Tomcat swallows at most this much of an
+  # over-limit body before aborting. JSON body size/depth is further constrained in Jackson.
+  max-http-request-header-size: 16KB
+  tomcat:
+    max-swallow-size: 2MB
+    max-http-form-post-size: 2MB
 
 # JWT: secret MUST be supplied via env (JWT_SECRET) in every real environment.
 # A dev-only default is set in application-dev.yml. TTLs are in milliseconds.
@@ -22,6 +33,22 @@ sentinel:
   security:
     max-failed-logins: 5
     lockout-minutes: 15
+    # Password policy (enforced on create/change). Overridable per profile / env.
+    password:
+      min-length: ${PASSWORD_MIN_LENGTH:12}
+      require-upper: true
+      require-lower: true
+      require-digit: true
+      require-special: true
+      max-length: 128
+    # HTTP hardening: CORS allow-list and security response headers.
+    web:
+      hsts-enabled: false            # HTTP in dev; prod profile turns this on
+      hsts-max-age-seconds: 31536000
+      cors:
+        # Comma-separated origins via env in real environments; never '*' with credentials.
+        allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+        allow-credentials: true
   ml:
     enabled: ${ML_ENABLED:false}
     base-url: ${ML_BASE_URL:http://localhost:8000}

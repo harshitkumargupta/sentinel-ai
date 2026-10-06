@@ -191,8 +191,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 11** — Kafka event-driven pipeline (outbox, idempotency, retry + DLQ, chaos demo)
 - [x] **Phase 12** — AI investigation (evidence validator, injection defense, safe NL search)
 - [x] **Phase 13** — SOAR-lite playbooks (human-approved response actions), analyst feedback → tuning loop, similar-incident lookup
-- [ ] **Phase 14** — Observability (Prometheus/Grafana dashboards)
-- [ ] **Phase 15** — Hardening & security review
+- [x] **Phase 14** — Security hardening (OWASP Top 10), static/dependency/dynamic scanning, threat model
+- [ ] **Phase 15** — Observability (Prometheus/Grafana dashboards)
 - [ ] **Phase 16** — Dockerize full stack
 - [ ] **Phase 17** — Kubernetes manifests
 - [ ] **Phase 18** — AWS deployment & CI/CD to cloud
@@ -432,6 +432,43 @@ invalidation) powers `GET /api/incidents/{id}/similar`, returning top matches wi
 features, how each was resolved, and a "what worked before" hint when the same action resolved them.
 
 All responses use the `ApiResponse` envelope `{ success, data, error, timestamp }`.
+
+---
+
+## Security hardening (Phase 14)
+
+An OWASP-Top-10 hardening pass plus static/dynamic/dependency scanning and a threat model.
+
+- **Headers & CORS**: CSP, `X-Content-Type-Options`, `X-Frame-Options`/`frame-ancestors`,
+  `Referrer-Policy`, `Permissions-Policy`, and HSTS (prod); a config-driven CORS allow-list
+  (`sentinel.security.web.cors`) that forbids `*`-with-credentials at startup.
+- **Auth**: HS256-pinned JWTs with required issuer/audience, `exp`/`nbf` + clock skew, and
+  `alg:none`/tamper rejection; refresh-token rotation with **reuse detection** (a replayed token
+  revokes the whole family); lockout; generic login errors; a config password policy.
+- **Access control**: every by-id endpoint is org-scoped (tenant isolation); an automated
+  `EndpointProtectionTest` enumerates all endpoints and **fails the build** on a new unprotected one.
+- **Input/output**: request-size caps, Jackson JSON depth/size limits (→ 4xx not 5xx), DTO
+  whitelisting, log-injection sanitizing, and an SSRF guard on the LLM client (configured host only).
+- **Secrets**: env-only; `gitleaks` (pre-commit + CI); prod fails fast on missing/weak
+  `JWT_SECRET`/`DB_PASSWORD`/`LLM_API_KEY`. Actuator is limited to health/info/prometheus; the rest
+  is ADMIN-only.
+- **Containers**: multi-stage, non-root Dockerfiles with `HEALTHCHECK` for backend, frontend (Nginx)
+  and the ML service.
+
+### Running the scans
+
+```bash
+./scripts/security-scan.sh                       # gitleaks, dependency-check, npm audit, Trivy, sec tests
+mvn -f backend/pom.xml -Psecurity verify         # + OWASP Dependency-Check (failBuildOnCVSS 7)
+cd frontend && npm audit --audit-level=high      # JS dependency CVEs
+# Server-based:
+docker compose -f infrastructure/docker/sonar.yml up -d   # SonarQube, then: sonar-scanner
+docker compose -f infrastructure/docker/zap.yml run --rm zap   # ZAP baseline (app must be running)
+```
+
+See [`docs/security/`](docs/security/): [threat model](docs/security/threat-model.md),
+[OWASP checklist](docs/security/checklist.md), [scan results](docs/security/scan-results.md),
+[accepted risks](docs/security/accepted-risks.md).
 
 ---
 
