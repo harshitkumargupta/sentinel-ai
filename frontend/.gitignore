@@ -2,3 +2,9 @@ node_modules/
 dist/
 .vite/
 *.local
+
+# Playwright
+test-results/
+playwright-report/
+lighthouse-dashboard.json
+lighthouse-report.json

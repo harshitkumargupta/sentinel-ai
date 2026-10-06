@@ -1,0 +1,26 @@
+-- SentinelAI :: alerts -- a detection rule firing. Incidents are created in a later phase.
+CREATE TABLE alerts (
+    id                  BIGINT                                    NOT NULL AUTO_INCREMENT,
+    org_id              BIGINT                                    NOT NULL,
+    rule_id             BIGINT                                    NULL,
+    rule_version        INT                                       NULL,
+    rule_type           VARCHAR(50)                               NOT NULL,
+    severity            ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL') NOT NULL,
+    mitre_technique     VARCHAR(20)                               NULL,
+    message             VARCHAR(500)                              NOT NULL,
+    entity_key          VARCHAR(255)                              NULL,
+    triggering_event_id BIGINT                                    NULL,
+    matched_event_ids   JSON                                      NULL,
+    run_id              VARCHAR(64)                               NULL,
+    created_at          DATETIME(6)                               NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    KEY idx_alerts_org (org_id),
+    KEY idx_alerts_rule (rule_id),
+    KEY idx_alerts_run (run_id),
+    KEY idx_alerts_entity (entity_key),
+    KEY idx_alerts_severity (severity),
+    KEY idx_alerts_created_at (created_at),
+    CONSTRAINT fk_alerts_org FOREIGN KEY (org_id) REFERENCES organizations (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_alerts_rule FOREIGN KEY (rule_id) REFERENCES detection_rules (id) ON DELETE SET NULL,
+    CONSTRAINT fk_alerts_event FOREIGN KEY (triggering_event_id) REFERENCES security_events (id) ON DELETE SET NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

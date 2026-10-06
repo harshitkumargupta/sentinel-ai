@@ -1,0 +1,46 @@
+# Test profile — runs against ephemeral Testcontainers (Docker required).
+#
+# MySQL is provided by the Testcontainers JDBC URL (jdbc:tc:mysql:...): the driver starts a
+# throwaway MySQL 8.4 container on first connection and shares it across the JVM, so every test —
+# @DataJpaTest slice or full @SpringBootTest — runs on a real MySQL with no local server. Redis and
+# Kafka containers are started on demand by the tests that need them (see support.Containers).
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:tc:mysql:8.4:///sentinelai_test?serverTimezone=UTC}
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    username: test
+    password: test
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.MySQLDialect
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+sentinel:
+  jwt:
+    secret: test-only-sentinel-ai-secret-key-0123456789-abcdefghij
+    access-token-ttl: 900000
+    refresh-token-ttl: 604800000
+  simulator:
+    enabled: true
+    default-intensity: 3
+  rate-limit:
+    enabled: false   # don't throttle the test suite; rate limiting has its own tests
+  baseline:
+    min-samples: 5
+  redis:
+    enabled: false   # default; Redis integration tests enable it explicitly
+  kafka:
+    enabled: false   # default; Kafka integration tests enable it explicitly
+  ai:
+    enabled: false   # default; AI tests enable it explicitly
+    provider: fake
+
+logging:
+  level:
+    org.hibernate.SQL: WARN

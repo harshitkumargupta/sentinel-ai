@@ -1,13 +1,22 @@
 # 🛡️ SentinelAI
 
+<!-- Replace OWNER with your GitHub org/user to activate the badges. -->
+[![CI](https://github.com/OWNER/sentinel-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/sentinel-ai/actions/workflows/ci.yml)
+[![Deploy](https://github.com/OWNER/sentinel-ai/actions/workflows/deploy.yml/badge.svg)](https://github.com/OWNER/sentinel-ai/actions/workflows/deploy.yml)
+
 An AI-powered **mini SOC (Security Operations Center)** platform — final-year capstone project.
 
 SentinelAI ingests security events, correlates them into incidents through a detection engine,
 scores risk, and gives analysts a dashboard to investigate — with AI assistance for triage and
 summarization in later phases.
 
-> **Status:** Phase 0 & Phase 1 (scaffold + runnable skeleton). Kafka, Redis, AI, and AWS are
-> intentionally **not** included yet.
+> **Status: v1.0.0** — feature-complete. Full pipeline (ingest → detect → correlate → risk → AI
+> triage → human-approved SOAR → audit), a React command center with Three.js visuals, OWASP
+> hardening, CI/CD to GHCR, zero-cost Compose deploy (Caddy + optional Cloudflare Tunnel), and
+> Prometheus/Grafana observability with k6 load tests and a seeded final evaluation. Everything runs
+> at **$0**; AWS is intentionally **out** ([ADR-003](docs/adr/ADR-003-zero-cost-deploy.md)).
+> See [deployment](docs/deployment.md) · [runbook](docs/runbook.md) · [demo](docs/demo-script.md) ·
+> [report](docs/report/report.md).
 
 ---
 
@@ -18,9 +27,12 @@ summarization in later phases.
 | Frontend         | React, Vite, React Router, Axios |
 | Backend          | Java 21, Spring Boot 3 (Web, Security, Data JPA, Validation, Actuator), Flyway, Lombok, springdoc-openapi |
 | Database         | MySQL 8 (via Docker Compose) |
+| Messaging        | Kafka (KRaft, no ZooKeeper) — event-driven pipeline with outbox, idempotency, retry + DLQ; optional, syncs fall back |
 | Build & CI       | Maven, npm, GitHub Actions |
 | Observability    | Actuator + Prometheus endpoint (Grafana later) |
-| Planned (later)  | Redis, Kafka, AI services, Prometheus/Grafana, AWS, Kubernetes |
+| Caching / limits | Redis (Lettuce) — cache-aside, token-bucket rate limiting, sliding-window store; in-memory fallback |
+| AI               | Pluggable LLM (OpenAI-compatible HTTP or a deterministic fake) — evidence-validated investigation, injection defense, safe NL search; key only from `LLM_API_KEY` |
+| Planned (later)  | Prometheus/Grafana, AWS, Kubernetes |
 
 Architecture: the backend is a **modular monolith** under `com.sentinelai` with modules
 `auth · event · incident · detection · risk · ai · dashboard · audit · common`.
@@ -35,7 +47,7 @@ sentinel-ai/
 ├── frontend/                 # React app (Vite)
 ├── backend/                  # Spring Boot (Maven, Java 21)
 ├── infrastructure/
-│   ├── docker/               # docker-compose.yml (MySQL for now)
+│   ├── docker/               # docker-compose.yml (MySQL, Redis, Kafka; Kafka UI via --profile ui)
 │   └── k8s/                  # Kubernetes manifests (later)
 ├── .github/workflows/        # CI: backend build + frontend build
 ├── docs/                     # architecture, event taxonomy, API contracts
@@ -50,17 +62,23 @@ sentinel-ai/
 ### Prerequisites
 - Java 21, Maven
 - Node.js 20+ and npm
-- Docker (for the MySQL container) — or a local MySQL on `:3306`
+- Docker — runs MySQL, Redis and Kafka (or bring your own on the default ports)
 
-### 1. Start the database
+### 1. Start the infrastructure
 
 ```bash
 docker compose -f infrastructure/docker/docker-compose.yml up -d
+# optional Kafka UI at http://localhost:8085:
+docker compose -f infrastructure/docker/docker-compose.yml --profile ui up -d
 ```
 
-This starts MySQL with database `sentinelai` and user `sentinel` / `sentinel` (matching the
-backend `dev` profile defaults). To point the backend at a different MySQL, set `DB_URL`,
-`DB_USER`, and `DB_PASSWORD`.
+This starts **MySQL** (`sentinelai`, user `sentinel`/`sentinel`), **Redis** (`:6379`) and **Kafka**
+(KRaft, `:9092`) — all with health checks, matching the backend `dev` profile defaults. Override
+with `DB_URL`/`DB_USER`/`DB_PASSWORD`, `REDIS_HOST`/`REDIS_PORT`, and `KAFKA_BOOTSTRAP_SERVERS`.
+
+On the `dev` profile the Kafka pipeline is **on** (`KAFKA_ENABLED`, default `true`); set
+`KAFKA_ENABLED=false` to force the synchronous ingestion path. Redis is optional (in-memory
+fallback). If Kafka is unreachable, ingestion degrades gracefully to the synchronous path.
 
 ### 2. Run the backend
 
@@ -83,6 +101,69 @@ npm run dev
 
 - App: http://localhost:5173 (the login page; it links through to the dashboard, which pings the backend health endpoint).
 
+### Dev seed data & credentials
+
+Under the `dev` profile, `DevDataSeeder` inserts one user per role (passwords BCrypt-hashed),
+three sample detection rules (with MITRE technique IDs), and two SHA-256-hashed honeytokens on
+first startup (idempotent, all under Default Org). Dev login credentials:
+
+| Username  | Email                  | Password      | Role    |
+|-----------|------------------------|---------------|---------|
+| `admin`   | admin@sentinel.ai      | `Admin@123`   | ADMIN   |
+| `analyst` | analyst@sentinel.ai    | `Analyst@123` | ANALYST |
+| `viewer`  | viewer@sentinel.ai     | `Viewer@123`  | VIEWER  |
+
+> These are **development-only** credentials for local use. They are not seeded under `prod`.
+
+---
+
+## Testing
+
+```bash
+cd backend
+mvn verify
+```
+
+Tests run against **real infrastructure via [Testcontainers](https://testcontainers.org)** — only
+Docker is required, no local test database or brokers. MySQL is provided by the Testcontainers JDBC
+URL (`jdbc:tc:mysql:8.4:///…` in `src/test/resources/application-test.yml`), so `@DataJpaTest` and
+full `@SpringBootTest` runs exercise native types (ENUM, JSON) and Flyway migrations exactly as in
+production. The Redis parity test and the Kafka pipeline tests start ephemeral Redis / Kafka
+containers on demand (`support.Containers`).
+
+The **Kafka pipeline tests** (`KafkaPipelineTest`, `KafkaDownFallbackTest`) cover the happy path end
+to end, idempotent duplicate delivery, retry→DLQ on a poison message, a poison message not blocking
+its partition, outbox recovery after a simulated crash, Kafka-down → synchronous fallback, DLQ
+replay, per-key ordering, and consumer-restart offset resume.
+
+> On macOS with Colima instead of Docker Desktop, point Testcontainers at the Colima socket:
+> `export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"` (and
+> `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`).
+
+---
+
+## Database
+
+Schema is owned by **Flyway** migrations in `backend/src/main/resources/db/migration`
+(`V1`…`V14`), applied automatically on startup; `spring.jpa.hibernate.ddl-auto=validate` makes
+the JPA entities verify against the migrated schema (the app fails fast on drift). MySQL 8+
+(InnoDB, `utf8mb4`).
+
+- **Multi-tenant:** `organizations` is the tenancy root; every org-scoped table carries `org_id`.
+  Migration `V2` seeds `Default Org` (id 1).
+- **Enums** use native MySQL `ENUM` (uppercase); **JSON** columns hold structured payloads
+  (`raw_payload`, `risk_breakdown`, `config`, `details`, …); audit hashes are `CHAR(64)`.
+- **13 tables:** organizations, users, security_events, incidents, incident_events,
+  detection_rules, backtest_runs, ai_analyses, audit_logs, notifications, honeytokens,
+  entity_baselines, playbook_actions.
+- **Delete rules:** CASCADE for owned links (`incident_events`, `backtest_runs`), SET NULL for
+  optional user references, RESTRICT elsewhere. `audit_logs` is insert-only (hash-chained).
+- Full diagram and index list: [`docs/erd.md`](docs/erd.md).
+
+JPA entities and Spring Data repositories live in their module packages (`auth`, `event`,
+`incident`, `detection`, `ai`, `audit`, `honeytoken`, `baseline`, `playbook`, `notification`),
+with a shared `BaseAuditableEntity` and `Organization` in `common`.
+
 ---
 
 ## Branching strategy
@@ -102,24 +183,298 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 
 - [x] **Phase 0** — Project scaffold (repo structure, tooling, docs, CI)
 - [x] **Phase 1** — Runnable skeleton (Spring Boot + MySQL, React shell, `/api/health`)
-- [ ] **Phase 2** — Database & domain model (events, incidents, rules, users, audit)
-- [ ] **Phase 3** — Authentication & authorization (JWT, roles ADMIN/ANALYST/VIEWER)
-- [ ] **Phase 4** — Event ingestion API
-- [ ] **Phase 5** — Incident model & triage workflow
-- [ ] **Phase 6** — Detection rule engine
-- [ ] **Phase 7** — Risk scoring
-- [ ] **Phase 8** — Dashboard read models & metrics API
-- [ ] **Phase 9** — Frontend: events & incidents views
-- [ ] **Phase 10** — Frontend: dashboard & charts
-- [ ] **Phase 11** — Redis (caching, rate limiting)
-- [ ] **Phase 12** — Kafka (event streaming pipeline)
-- [ ] **Phase 13** — AI: incident summarization & triage assistance
-- [ ] **Phase 14** — AI: natural-language querying
-- [ ] **Phase 15** — Observability (Prometheus/Grafana dashboards)
-- [ ] **Phase 16** — Hardening & security review
-- [ ] **Phase 17** — Dockerize full stack
-- [ ] **Phase 18** — Kubernetes manifests
-- [ ] **Phase 19** — AWS deployment & CI/CD to cloud
+- [x] **Phase 2** — Database & domain model (events, incidents, rules, users, audit)
+- [x] **Phase 3** — Authentication & authorization (JWT, roles ADMIN/ANALYST/VIEWER)
+- [x] **Phase 4** — REST APIs (events, incidents, rules, users, dashboard) + audit hash chain
+- [x] **Phase 5** — Incident model & triage workflow (status/feedback/assign APIs)
+- [x] **Phase 6** — Detection rule engine (pluggable strategies, auto incident creation/correlation)
+- [x] **Phase 7** — Risk scoring (factor pipeline, correlation, incidents, timeline)
+- [x] **Phase 8** — Dashboard read models, metrics API, risk waterfall & incident UI
+- [x] **Phase 8b** — Multi-site + admin-action risk engine (sites, API keys, admin risk guard)
+- [x] **Phase 9** — ML risk model (anomaly models, FastAPI scoring service, hybrid risk)
+- [x] **Phase 10** — Redis (caching, rate limiting, sliding windows), behavioral baselines, attack-storyline graph
+- [x] **Phase 11** — Kafka event-driven pipeline (outbox, idempotency, retry + DLQ, chaos demo)
+- [x] **Phase 12** — AI investigation (evidence validator, injection defense, safe NL search)
+- [x] **Phase 13** — SOAR-lite playbooks (human-approved response actions), analyst feedback → tuning loop, similar-incident lookup
+- [x] **Phase 14** — Security hardening (OWASP Top 10), static/dependency/dynamic scanning, threat model
+- [x] **Phase 15** — CI/CD (GitHub Actions → GHCR), zero-cost deploy (Compose + Caddy + Cloudflare Tunnel), rollback/backup
+- [x] **Phase 16** — UI/UX design system + command-center dashboard + lazy-loaded Three.js visuals (AttackGlobe, ThreatCore)
+- [ ] **Phase 17b** — Observability (Prometheus/Grafana dashboards)
+- [ ] **Phase 17** — Kubernetes manifests
+- [ ] **Phase 18** — AWS deployment & managed CI/CD to cloud
+
+---
+
+## API & authentication
+
+Stateless **JWT** auth. Log in to get a 15-minute access token and a 7-day refresh token
+(the refresh token is stored only as a SHA-256 hash). Send the access token as
+`Authorization: Bearer <token>`; the Axios client refreshes it automatically on a 401.
+Accounts lock for 15 minutes after 5 failed logins. Every login failure and admin action is
+also recorded as a `security_event` (self-monitoring) and in the tamper-evident audit chain.
+Set `JWT_SECRET` (≥ 32 chars) in every non-dev environment.
+
+Interactive docs with a "Bearer" auth button: `/swagger-ui.html`.
+
+### Roles
+
+| Capability | VIEWER | ANALYST | ADMIN |
+|---|:---:|:---:|:---:|
+| Read events / incidents / rules / dashboard | ✓ | ✓ | ✓ |
+| Ingest events (`POST /api/events`) | | ✓ | ✓ |
+| Change incident status / feedback / assignee | | ✓ | ✓ |
+| Manage detection rules (CRUD, enable/disable) | | | ✓ |
+| Manage users; read/verify audit logs | | | ✓ |
+
+### Endpoints
+
+| Method | Path | Access |
+|---|---|---|
+| POST | `/api/auth/login` · `/api/auth/refresh` | public |
+| POST | `/api/auth/logout` · GET `/api/auth/me` | authenticated |
+| GET/POST/PUT/PATCH/DELETE | `/api/users`, `/api/users/{id}`, `/api/users/{id}/disable` | ADMIN |
+| GET | `/api/events` · `/api/events/{id}` | VIEWER+ |
+| POST | `/api/events` | ANALYST+ |
+| GET | `/api/incidents` · `/api/incidents/{id}` | VIEWER+ |
+| PATCH | `/api/incidents/{id}/status` · `/feedback` · `/assign` | ANALYST+ |
+| GET | `/api/rules` · `/api/rules/{id}` | VIEWER+ |
+| POST/PUT/DELETE/PATCH | `/api/rules`, `/api/rules/{id}`, `/api/rules/{id}/enabled` | ADMIN |
+| GET | `/api/dashboard/summary` | VIEWER+ |
+| GET | `/api/audit-logs` (paged) · `/api/audit-logs/verify` | ADMIN |
+| POST | `/api/events/ingest` · `/api/events/ingest/batch` | ANALYST+ |
+| GET | `/api/alerts` (paged) | VIEWER+ |
+| POST | `/api/rules/{id}/backtest` | ADMIN |
+| POST | `/api/simulator/run` · GET `/api/simulator/runs` | ADMIN (flag on) |
+| GET | `/api/evaluation/detection?runId=` | VIEWER+ |
+| GET | `/api/incidents/{id}/timeline` · `/risk` · `/evidence` | VIEWER+ |
+| GET | `/api/dashboard/alert-reduction` · `/mitre-coverage` | VIEWER+ |
+| GET/POST | `/api/sites`, `/api/sites/{id}/keys/rotate`, `/api/sites/{id}/snippet` | ADMIN (list: any) |
+| POST | `/api/events/ingest` with `X-API-Key` | per-site ingest key |
+| POST | `/api/admin/actions/disable-user/{id}` (risk-gated) | ADMIN |
+| GET/POST | `/api/admin/pending[/{id}/approve|reject]` | ADMIN |
+| GET/POST | `/api/admin/sessions/{userId}[/revoke]` · `/api/admin/timeline` | ADMIN |
+| GET | `/api/incidents/{id}/graph` (attack-storyline graph) | VIEWER+ |
+| GET | `/api/admin/cache-stats` (cache hit/miss/hit-rate) | ADMIN |
+| GET | `/api/incidents/{id}/actions` · `/api/incidents/{id}/similar?limit=` | VIEWER+ |
+| POST | `/api/actions/{id}/dry-run` · `/approve` · `/reject` · `/execute` · `/rollback` | ANALYST+ (HIGH/CRITICAL approve: ADMIN) |
+| GET | `/api/rules/{id}/tuning-suggestions` · `/api/rules/tuning-suggestions` | ANALYST+ |
+| GET | `/api/evaluation/response-time` (alert → approved-action latency) | ANALYST+ |
+
+### ML risk model (hybrid)
+
+A Python **ML scoring service** (`ml/`, FastAPI + scikit-learn + SHAP) trains IsolationForest +
+GradientBoosting models and serves `POST /score` (features → `{score, model_version, top_features}`).
+The Java `MlScoringClient` (resilient HTTP impl with timeout/retry/circuit breaker, NoOp fallback,
+behind `ml.enabled`) feeds an **`MlRiskFactor`** into the risk pipeline with a **capped** weight — the
+model augments but never overrides the hard rules — and the SHAP reasons + model version appear in the
+incident waterfall. The same factor plugs into the admin-risk engine; a scheduled **drift monitor**
+raises an alert when live feature stats diverge from training. Shared feature spec:
+[docs/ml-features.md](docs/ml-features.md). Rules-only vs model vs hybrid:
+[docs/ml-evaluation.md](docs/ml-evaluation.md) — on held-out data rules-only recall ≈ 0.65 vs
+model/hybrid ≈ 1.00. Run the service: `cd ml && uvicorn app:app --port 8000` (see [ml/README.md](ml/README.md)).
+
+### Multi-site & admin-action risk
+
+An org has multiple **sites**; events/incidents/rules are site-tagged and ingestion authenticates
+with a per-site **`X-API-Key`** (hashed, rotatable/revocable). Sensitive **admin actions** run
+through a risk-adaptive **guard** (factors: time, new IP/country/device, action sensitivity, burst,
+privilege escalation, peer deviation, unusual site): LOW allow · MEDIUM step-up · HIGH pending
+approval by another admin (no self-approval, expires) · CRITICAL block + session revoke + notify.
+See [docs/admin-risk.md](docs/admin-risk.md).
+
+### Risk, correlation & incidents
+
+Detection **alerts** are correlated into **incidents** by entity (user/IP) within a time window
+(chaining related rule types). Each incident is risk-scored (0–100) by a pluggable
+`RiskFactor` pipeline (severity, frequency, repetition, asset criticality, honeytoken, user
+behavior, MITRE kill-chain stage) with weights/cutoffs in `sentinel.risk.*` — see
+[docs/risk-model.md](docs/risk-model.md). Joining is idempotent and rescores on every alert;
+crossing into HIGH/CRITICAL escalates and notifies admins. State machine
+`OPEN → INVESTIGATING → CONTAINED → RESOLVED` (+ `FALSE_POSITIVE`), with a full
+`incident_timeline`. Reference run (seed 42): **174 events → 33 alerts → 10 incidents
+(94% reduction)**, incident-level precision/recall 1.0.
+
+### Detection, ingestion & simulation
+
+Ingested events (API or simulator) are normalized, GeoIP-enriched, deduped by optional
+`clientEventId`, then run **synchronously** through pluggable detection rules that emit **alerts**.
+Rule thresholds live in each rule's `config` JSON (admin-editable, no redeploy), e.g.
+`{"threshold":10,"windowSeconds":300,"groupBy":"username"}`. Rules: `BRUTE_FORCE`,
+`CREDENTIAL_STUFFING`, `HIGH_FREQUENCY_API`, `SUSPICIOUS_LOGIN`, `IMPOSSIBLE_TRAVEL`,
+`ABNORMAL_ACCESS`, `HONEYTOKEN` — see [docs/detection-rules.md](docs/detection-rules.md).
+
+The **simulator** (`sentinel.simulator.enabled=true`, dev default on) generates deterministic,
+labeled events for scenarios `normal, brute_force, credential_stuffing, suspicious_login,
+impossible_travel, api_abuse, abnormal_access, honeytoken`, and the **evaluation harness** scores
+detection against those labels (precision/recall/F1, mean latency). Reference run (seed 42): overall
+precision ≈ 0.99, recall 1.00.
+
+### AI: evidence-validated investigation (Phase 12)
+
+Behind `sentinel.ai.enabled` (dev default on, with a deterministic **fake** provider so no key is
+needed). The API key for a real model comes **only** from `LLM_API_KEY` (never committed or logged);
+set `AI_PROVIDER=http` and `AI_MODEL` to use an OpenAI-compatible endpoint. With AI off, or the model
+unavailable/over budget, every feature returns a deterministic fallback — the core API never fails
+because of the LLM.
+
+- **Investigate** — `POST /api/incidents/{id}/investigate` (ANALYST+, rate-limited, idempotent) runs
+  the 3-stage pipeline (analyze → correlate → recommend) asynchronously (Kafka or a thread pool) and
+  returns `202` with an analysis id. `GET /api/incidents/{id}/analysis` and `GET /api/analysis/{id}`
+  read results; `POST /api/analysis/{id}/review {APPROVE|REJECT|MODIFY}` is audit-logged and approved
+  recommendations become **PROPOSED** playbook actions.
+- **Evidence validator** (the key control) — every claim must cite event ids from *this* incident;
+  recommendation actions are allow-listed and targets must appear in the evidence; a faithfulness
+  score is recorded; invalid output gets one repair retry, then a deterministic FALLBACK.
+- **Prompt-injection defense** — untrusted log data is delimited and the model told it is not
+  instructions; an `InjectionDetector` raises a `PROMPT_INJECTION` event and flags the incident; the
+  model has no tools and output is schema-validated regardless of what the data says.
+- **Safe NL search** — `POST /api/search/nl {query}` → the model returns an allow-listed filter only
+  (never SQL); it is validated, capped, and run through the existing parameterized query, with the
+  interpreted filter shown as chips. `GET /api/evaluation/ai` reports faithfulness/validity/injection
+  metrics.
+
+See [`docs/ai-design.md`](docs/ai-design.md), [`docs/adr/ADR-002-ai-guardrails.md`](docs/adr/ADR-002-ai-guardrails.md)
+and [`docs/ai-evaluation.md`](docs/ai-evaluation.md).
+
+### Kafka: event-driven ingestion pipeline
+
+Behind `sentinel.kafka.enabled` (dev default on), `POST /api/events/ingest` persists the event and
+an **outbox** row in one transaction and returns `202 Accepted`; a scheduled relay publishes outbox
+rows to Kafka, and independent consumer groups carry the event through detection, correlation,
+analytics and notification. With the flag off — or the broker unreachable — the same endpoint runs
+the original synchronous in-process detection path (returning `200`). Messages are keyed by
+`entity_key` so one entity's events stay ordered per partition. See
+[`docs/adr/ADR-001-kafka.md`](docs/adr/ADR-001-kafka.md) and the flow diagram in
+[`docs/architecture.md`](docs/architecture.md).
+
+**Topic map**
+
+| Topic | Produced by | Consumed by (group) | Purpose |
+|-------|-------------|---------------------|---------|
+| `events.raw` | external collectors / chaos burst | raw-ingest (`sentinel-raw-ingest`) | normalize + persist (→ outbox) |
+| `events.normalized` | outbox relay | detection (`sentinel-detection`), analytics (`sentinel-analytics`) | run rules; counters + baselines |
+| `alerts` | detection | correlation (`sentinel-correlation`) | correlate alerts into incidents |
+| `incidents.updates` | correlation | notification (`sentinel-notification`) | notify on HIGH/CRITICAL |
+| `events.retry` | any failing consumer | retry (`sentinel-retry`) | exponential-backoff re-dispatch |
+| `events.dlq` | retry (exhausted) | dlq (`sentinel-dlq`) | persist dead letters for replay |
+
+Reliability: **outbox** (no loss across crashes), **idempotency** via `processed_messages`
+(duplicate delivery is a no-op), **retry→DLQ** with manual offset commits (poison never blocks a
+partition). Admin surface: `GET /api/admin/pipeline-status`, `GET /api/admin/dlq` +
+`POST /api/admin/dlq/{id}/replay` + `/replay-all`, and chaos hooks
+`POST /api/admin/chaos/{pause,resume,burst}` (all ADMIN-only, audit-logged). Metrics (publish/consume
+counts, consumer lag, processing time, retry/DLQ counts, outbox backlog) are exposed via Actuator.
+The React **Pipeline** page (ADMIN) shows the status card, DLQ table and chaos controls.
+
+**Chaos demo & benchmark** (backend up with Kafka enabled):
+
+```bash
+# pause a consumer, burst N events, watch lag, resume, verify zero loss / zero duplicates
+ADMIN_USER=admin ADMIN_PASS='Admin@123' scripts/chaos-demo.sh 2000
+
+# compare sync vs Kafka ingest (run per mode; see docs/performance.md for numbers)
+MODE=kafka N=10000 scripts/benchmark.sh
+```
+
+### Redis: caching, rate limiting & resilient fallback
+
+Redis (Lettuce) backs three things, each behind an interface with an **in-memory fallback** so the
+app never fails a request when Redis is disabled or down (`sentinel.redis.enabled`, default off; dev
+on). A single `RedisGateway` seam catches failures, logs the outage **once** with a traceId, counts
+it under the `sentinel.redis.failures` meter, and degrades:
+
+- **Cache-aside** for dashboard reads (`summary`, `alert-reduction`, `mitre-coverage`,
+  `recent-incidents`) with a short TTL, a per-key single-flight **stampede guard**, **tenant-scoped
+  keys** (`dash:org:{org}:site:{site}:{name}`) and **explicit event-driven invalidation** when
+  incidents/alerts change. Stats at `GET /api/admin/cache-stats`. Benchmark (cached vs uncached
+  p50/p95): [docs/performance.md](docs/performance.md) — **p95 13.9 ms → 3.2 ms (~4.3×)**.
+- **Token-bucket rate limiting** (atomic Lua) per API-key/IP, configurable per endpoint group
+  (`sentinel.rate-limit.*`: login strict, ingest generous). Breaches return `429` in the unified
+  error format with `Retry-After` + `X-RateLimit-*` headers and are recorded as `API_ABUSE` events.
+- **Sliding-window store** for detection rules (sorted sets); `RedisWindowStore` and the in-memory
+  store make **identical** counting decisions (parity test).
+
+### Behavioral baselines
+
+Per-entity (user/IP/admin) × metric (e.g. login hour) rolling **mean/std** computed incrementally
+with **Welford's algorithm** — hot in Redis, periodically persisted to `entity_baselines`, with a
+minimum sample count before a baseline is trusted (`sentinel.baseline.*`). A `BaselineDeviationRule`
+flags `|z-score|` above threshold with a human-readable reason, a `BaselineFactor` feeds the risk
+engine, and the same z-scores become ML features. **Cold-start entities are skipped, not flagged.**
+
+### Attack-storyline graph
+
+`GET /api/incidents/{id}/graph` returns typed **nodes** (incident, alert, user, IP, resource,
+honeytoken) and **edges** (`HAS_ALERT`, `INVOLVES`, `LOGIN_FROM`, `ACCESSED`, `TOUCHED`) with counts
+and timestamps, plus a **kill-chain** derived from each alert's MITRE technique. Node count is capped
+(`sentinel.graph.max-nodes`) with the remainder aggregated. The incident page renders it as an
+interactive SVG graph with click-to-inspect, a kill-chain strip, and a time slider that replays the
+attack. Example (credential stuffing): 8 users → one source IP, kill-chain stage 3 (Credential
+Access, T1110.004).
+
+### SOAR-lite playbooks, tuning loop & similar incidents (Phase 13)
+
+**Playbooks.** AI recommendations become **PROPOSED** `playbook_actions`
+(`block_ip`, `disable_user`, `force_password_reset`, `revoke_sessions`, `add_watchlist`) that run
+against **mock firewall/identity adapters** behind interfaces. Lifecycle
+`PROPOSED → APPROVED → EXECUTED → ROLLED_BACK` (plus `REJECTED`/`FAILED`/`EXPIRED`); illegal
+transitions throw `InvalidStateTransitionException`. A **dry-run** previews the change and blast
+radius without changing state; **protected targets** (admins, allow-listed IPs, the internal
+network) are never acted on; destructive actions must be on a config allow-list; HIGH/CRITICAL
+actions need an **ADMIN approver who differs from the proposer** and passes the admin-risk guard;
+approvals **expire** after `sentinel.playbook.expiry-minutes`; execute is **idempotent** and retries
+the adapter; every transition is audited (before/after) and added to the incident timeline. See
+[`docs/playbooks.md`](docs/playbooks.md).
+
+**Feedback → tuning.** From analyst `TRUE_POSITIVE`/`FALSE_POSITIVE` labels, `GET
+/api/rules/{id}/tuning-suggestions` replays the existing backtest at higher thresholds and reports,
+e.g. *"raise threshold 5 → 8: removes 60% of false positives, loses 0 true positives"* — only above
+a configured minimum sample size, **never auto-applied** (an admin applies via the audited rule-edit
+path). The dashboard ranks rules by FP rate with an **Apply** button.
+
+**Similar incidents.** `SimilarityService` (default: feature-vector cosine over rule types, MITRE
+techniques, entity type, severity, hour bucket and event-type counts, scoped per org, cached with
+invalidation) powers `GET /api/incidents/{id}/similar`, returning top matches with score, shared
+features, how each was resolved, and a "what worked before" hint when the same action resolved them.
+
+All responses use the `ApiResponse` envelope `{ success, data, error, timestamp }`.
+
+---
+
+## Security hardening (Phase 14)
+
+An OWASP-Top-10 hardening pass plus static/dynamic/dependency scanning and a threat model.
+
+- **Headers & CORS**: CSP, `X-Content-Type-Options`, `X-Frame-Options`/`frame-ancestors`,
+  `Referrer-Policy`, `Permissions-Policy`, and HSTS (prod); a config-driven CORS allow-list
+  (`sentinel.security.web.cors`) that forbids `*`-with-credentials at startup.
+- **Auth**: HS256-pinned JWTs with required issuer/audience, `exp`/`nbf` + clock skew, and
+  `alg:none`/tamper rejection; refresh-token rotation with **reuse detection** (a replayed token
+  revokes the whole family); lockout; generic login errors; a config password policy.
+- **Access control**: every by-id endpoint is org-scoped (tenant isolation); an automated
+  `EndpointProtectionTest` enumerates all endpoints and **fails the build** on a new unprotected one.
+- **Input/output**: request-size caps, Jackson JSON depth/size limits (→ 4xx not 5xx), DTO
+  whitelisting, log-injection sanitizing, and an SSRF guard on the LLM client (configured host only).
+- **Secrets**: env-only; `gitleaks` (pre-commit + CI); prod fails fast on missing/weak
+  `JWT_SECRET`/`DB_PASSWORD`/`LLM_API_KEY`. Actuator is limited to health/info/prometheus; the rest
+  is ADMIN-only.
+- **Containers**: multi-stage, non-root Dockerfiles with `HEALTHCHECK` for backend, frontend (Nginx)
+  and the ML service.
+
+### Running the scans
+
+```bash
+./scripts/security-scan.sh                       # gitleaks, dependency-check, npm audit, Trivy, sec tests
+mvn -f backend/pom.xml -Psecurity verify         # + OWASP Dependency-Check (failBuildOnCVSS 7)
+cd frontend && npm audit --audit-level=high      # JS dependency CVEs
+# Server-based:
+docker compose -f infrastructure/docker/sonar.yml up -d   # SonarQube, then: sonar-scanner
+docker compose -f infrastructure/docker/zap.yml run --rm zap   # ZAP baseline (app must be running)
+```
+
+See [`docs/security/`](docs/security/): [threat model](docs/security/threat-model.md),
+[OWASP checklist](docs/security/checklist.md), [scan results](docs/security/scan-results.md),
+[accepted risks](docs/security/accepted-risks.md).
 
 ---
 
@@ -128,3 +483,62 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [Architecture](docs/architecture.md)
 - [Event taxonomy & roles](docs/event-taxonomy.md)
 - [API contracts](docs/api-contracts.md)
+- [Entity-relationship diagram (ERD)](docs/erd.md)
+- [Detection engine](docs/detection.md)
+- [Detection rules & simulator](docs/detection-rules.md)
+- [Risk model & correlation](docs/risk-model.md)
+- [Multi-site & admin-action risk](docs/admin-risk.md)
+- [ML feature spec](docs/ml-features.md) · [ML evaluation](docs/ml-evaluation.md) · [ML service](ml/README.md)
+- [Caching benchmark (cached vs uncached)](docs/performance.md)
+- [SOAR-lite playbooks (state machine & safety rules)](docs/playbooks.md)
+- [Deployment (zero-cost: Compose + Caddy + Cloudflare Tunnel)](docs/deployment.md) · [ADR-003: zero-cost deploy](docs/adr/ADR-003-zero-cost-deploy.md)
+- [Security: threat model & scans](docs/security/threat-model.md)
+- [UI design system & Three.js visuals](docs/ui-design.md)
+- [Observability & SLOs](docs/slo.md) · [Runbook](docs/runbook.md) · [Demo script](docs/demo-script.md) · [Viva Q&A](docs/viva-qa.md)
+- [Load tests](load-tests/README.md) · [Final evaluation](docs/final-evaluation.md) · [Project report](docs/report/report.md) · [ADR index](docs/adr/README.md)
+
+---
+
+## Quick start (one command)
+
+```bash
+# Prod-like stack (build images locally, then deploy with health-gate + smoke test + auto-rollback):
+cp infrastructure/docker/.env.example infrastructure/docker/.env   # set secrets; IMAGE_BASE=sentinel-ai TAG=local
+docker build -t sentinel-ai-backend:local backend && \
+docker build -t sentinel-ai-frontend:local frontend && \
+IMAGE_BASE=sentinel-ai ./scripts/deploy.sh local                   # → http://localhost (admin bootstrap via .env)
+```
+
+Dev mode: `docker compose -f infrastructure/docker/docker-compose.yml up -d` then
+`cd backend && mvn spring-boot:run` and `cd frontend && npm run dev` (login `admin / Admin@123`).
+Observability: `docker compose -f infrastructure/docker/monitoring.yml up -d` → Grafana at :3000.
+
+## Screenshots
+
+| Command center | Attack globe + charts | Grafana |
+|---|---|---|
+| ![dashboard](docs/screenshots/02-dashboard.png) | ![light](docs/screenshots/03-dashboard-light.png) | ![grafana](docs/screenshots/05-grafana.png) |
+
+## Results (seeded, single 8 GB node — see limitations)
+
+| Metric | Value |
+|--------|-------|
+| Incident-level detection recall | 0.75 (6/8 seeded scenarios) |
+| Alert reduction (events → incidents) | ~98.6% |
+| Dashboard read throughput (cached) | ~1,237 req/s @ p95 94 ms |
+| Single event ingest latency | ~130 ms |
+| Kafka chaos (retry→DLQ→replay) | zero loss / zero duplicates |
+| Backend tests | 174 passing (Testcontainers) |
+| Lighthouse (dashboard, Low) | A11y 96 · Best-practices 96 · Perf ~82 |
+
+Details: [final evaluation](docs/final-evaluation.md) · [performance](docs/performance.md).
+
+## Contributing
+
+Branch `feature/*` from `develop`; Conventional Commits; `mvn clean verify` + `npm run build` must
+pass; open a PR into `develop`. `main` is releasable. See [docs/engineering-standards.md](docs/engineering-standards.md) for engineering
+standards.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

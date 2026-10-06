@@ -1,61 +1,170 @@
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useHealth } from '../hooks/useHealth.js';
-import StatusBadge from '../components/StatusBadge.jsx';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import NavBar from '../components/NavBar.jsx';
+import TuningCard from '../components/TuningCard.jsx';
+import ThreatCoreLazy from '../components/three/ThreatCoreLazy.jsx';
+import AttackGlobeLazy from '../components/three/AttackGlobeLazy.jsx';
+import { Card, StatTile, Table, Badge, EmptyState, ErrorState, SkeletonLines } from '../components/ui/index.js';
+import { getSummary, getAlertReduction, getMitreCoverage, getGeoFlows } from '../services/dashboard.service.js';
+import { listEvents } from '../services/events.service.js';
+import { getPipelineStatus } from '../services/pipeline.service.js';
+import { messageFromError } from '../services/errors.js';
 
-const PLACEHOLDER_TILES = [
-  { label: 'Open Incidents', value: '—' },
-  { label: 'Events (24h)', value: '—' },
-  { label: 'Active Rules', value: '—' },
-  { label: 'Highest Risk', value: '—' },
-];
+const DashboardCharts = lazy(() => import('../components/DashboardCharts.jsx'));
+const REFRESH_MS = 15000;
+
+function threatLevel(summary) {
+  const sev = summary?.incidentsBySeverity || {};
+  if ((sev.CRITICAL || 0) > 0) return 'CRITICAL';
+  if ((sev.HIGH || 0) > 0) return 'HIGH';
+  if ((sev.MEDIUM || 0) > 0) return 'MEDIUM';
+  return 'LOW';
+}
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
-  const { status, detail } = useHealth();
-  const navigate = useNavigate();
+  const [data, setData] = useState({ summary: null, reduction: null, mitre: [], geo: [], pipeline: null });
+  const [events, setEvents] = useState([]);
+  const [newIds, setNewIds] = useState(new Set());
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const seen = useRef(new Set());
 
-  function handleLogout() {
-    logout();
-    navigate('/login');
-  }
+  const load = useCallback(async () => {
+    try {
+      const [summary, reduction, mitre, geo] = await Promise.all([
+        getSummary(), getAlertReduction(), getMitreCoverage(), getGeoFlows(),
+      ]);
+      let pipeline = null;
+      try { pipeline = await getPipelineStatus(); } catch { pipeline = null; /* disabled → 404 */ }
+      const page = await listEvents({ size: 20, sort: 'eventTimestamp,desc' });
+      const rows = page?.content || [];
+      const fresh = new Set();
+      rows.forEach((e) => { if (!seen.current.has(e.id)) fresh.add(e.id); seen.current.add(e.id); });
+      setData({ summary, reduction, mitre, geo, pipeline });
+      setEvents(rows);
+      setNewIds(fresh);
+      setError(null);
+      setUpdatedAt(new Date());
+    } catch (e) {
+      setError(messageFromError(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (paused) return undefined;
+    const t = setInterval(load, REFRESH_MS);
+    return () => clearInterval(t);
+  }, [paused, load]);
+
+  const level = threatLevel(data.summary);
+  const sevData = useMemo(() => Object.entries(data.summary?.eventsBySeverity || {})
+    .map(([name, value]) => ({ name, value: Number(value) })), [data.summary]);
+  const typeData = useMemo(() => Object.entries(data.summary?.eventsByType || {})
+    .map(([name, value]) => ({ name, value: Number(value) }))
+    .filter((d) => d.value > 0).sort((a, b) => b.value - a.value).slice(0, 6), [data.summary]);
+  const maxMitre = Math.max(1, ...data.mitre.map((m) => m.alertCount));
+  const eventsPerMin = data.summary ? (data.summary.eventsLast24h / 1440) : 0;
+
+  const eventColumns = [
+    { key: 'eventTimestamp', header: 'Time', sortable: true, width: 150,
+      render: (r) => new Date(r.eventTimestamp).toLocaleTimeString() },
+    { key: 'eventType', header: 'Type', sortable: true },
+    { key: 'severity', header: 'Severity', sortable: true,
+      render: (r) => <Badge variant={r.severity}>{r.severity}</Badge> },
+    { key: 'sourceIp', header: 'Source IP', render: (r) => r.sourceIp || '—' },
+    { key: 'username', header: 'User', render: (r) => r.username || '—' },
+  ];
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="brand-row">
-          <span className="brand">🛡️ SentinelAI</span>
-          <StatusBadge status={status} />
-        </div>
-        <div className="user-row">
-          <span className="user-email">{user?.email || 'guest'}</span>
-          <button className="ghost" onClick={handleLogout}>
-            Sign out
-          </button>
-        </div>
-      </header>
-
+      <NavBar />
       <main className="content">
-        <h2>SOC Overview</h2>
-        <p className="subtitle">
-          Placeholder dashboard — live metrics arrive once events and incidents land (Phase 2+).
-        </p>
-
-        <section className="tiles">
-          {PLACEHOLDER_TILES.map((t) => (
-            <div className="tile" key={t.label}>
-              <span className="tile-value">{t.value}</span>
-              <span className="tile-label">{t.label}</span>
+        <div className="dash-head">
+          <div className="dash-head__title">
+            <ThreatCoreLazy size={44} level={level} />
+            <div>
+              <h2 style={{ margin: 0 }}>Command Center</h2>
+              <span className="ui-card__subtitle">
+                Threat level <Badge variant={level}>{level}</Badge>
+                {updatedAt && <> · updated {updatedAt.toLocaleTimeString()}</>}
+              </span>
             </div>
-          ))}
-        </section>
+          </div>
+          <button className="ui-btn ui-btn--sm" onClick={() => setPaused((p) => !p)}
+            aria-pressed={paused}>{paused ? '▶ Resume' : '⏸ Pause'} auto-refresh</button>
+        </div>
 
-        <section className="panel">
-          <h3>Backend health</h3>
-          <pre className="code-block">
-            {status === 'up' ? JSON.stringify(detail, null, 2) : `status: ${status}`}
-          </pre>
-        </section>
+        {error && <ErrorState message={error} onRetry={load} />}
+
+        {loading && !data.summary ? (
+          <Card><SkeletonLines lines={4} /></Card>
+        ) : (
+          <>
+            <div className="kpi-row">
+              <Card><StatTile label="Open incidents" value={Number(data.summary?.incidentsByStatus?.OPEN || 0)} /></Card>
+              <Card><StatTile label="Events / min" value={Number(eventsPerMin.toFixed(1))} /></Card>
+              <Card><StatTile label="Alert reduction" value={data.reduction?.reductionPct || 0} suffix="%" /></Card>
+              <Card><StatTile label="Events (24h)" value={Number(data.summary?.eventsLast24h || 0)} /></Card>
+              <Card><StatTile label="Critical+High" value={Number((data.summary?.incidentsBySeverity?.CRITICAL || 0) + (data.summary?.incidentsBySeverity?.HIGH || 0))} /></Card>
+            </div>
+
+            <div className="dash-grid">
+              <Card title="Attack origins" subtitle="Live geo flows to protected sites" className="dash-grid__globe">
+                <AttackGlobeLazy flows={data.geo} height={320} />
+              </Card>
+
+              <Suspense fallback={<><Card title="Events by severity"><SkeletonLines lines={3} /></Card><Card title="Top event types"><SkeletonLines lines={3} /></Card></>}>
+                <DashboardCharts sevData={sevData} typeData={typeData} />
+              </Suspense>
+
+              <Card title="MITRE ATT&CK coverage" className="dash-grid__mitre">
+                {data.mitre.length === 0 ? <EmptyState title="No techniques yet" /> : (
+                  <div className="mitre-heat" role="img" aria-label="MITRE technique heatmap">
+                    {data.mitre.map((m) => {
+                      const t = m.alertCount / maxMitre;
+                      return (
+                        <div key={m.technique} className="mitre-cell"
+                          title={`${m.technique}: ${m.alertCount} alerts, ${m.ruleCount} rules`}
+                          style={{ background: m.alertCount === 0 ? 'var(--panel-2)' : `color-mix(in srgb, var(--danger) ${20 + t * 70}%, transparent)` }}>
+                          <span>{m.technique}</span>
+                          <strong>{m.alertCount}</strong>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              <Card title="Pipeline health" subtitle="Kafka lag / DLQ">
+                {data.pipeline ? (
+                  <div className="pipe-health">
+                    <StatTile label="Consumer lag" value={Number(data.pipeline.totalLag ?? data.pipeline.lag ?? 0)} />
+                    <StatTile label="DLQ messages" value={Number(data.pipeline.dlqCount ?? 0)} />
+                  </div>
+                ) : <EmptyState icon="⇄" title="Pipeline disabled" message="Kafka is not enabled on this instance." />}
+              </Card>
+
+              <Card title="AI activity" subtitle="Investigations">
+                <div className="pipe-health">
+                  <StatTile label="Incidents reviewed" value={Number((data.summary?.incidentsByStatus?.RESOLVED || 0) + (data.summary?.incidentsByStatus?.CONTAINED || 0))} />
+                  <StatTile label="Open" value={Number(data.summary?.incidentsByStatus?.OPEN || 0)} />
+                </div>
+              </Card>
+            </div>
+
+            <Card title="Live event stream" subtitle={paused ? 'paused' : 'auto-refreshing'}
+              style={{ marginTop: 'var(--sp-4)' }}>
+              <Table columns={eventColumns} rows={events} rowKey={(r) => r.id} newRowKeys={newIds}
+                maxHeight={320} emptyLabel="No recent events" />
+            </Card>
+
+            <div style={{ marginTop: 'var(--sp-4)' }}><TuningCard /></div>
+          </>
+        )}
       </main>
     </div>
   );

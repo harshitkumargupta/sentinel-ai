@@ -18,6 +18,26 @@ spring:
     baseline-version: 0
     locations: classpath:db/migration
 
+sentinel:
+  jwt:
+    # DEV ONLY default secret (>= 32 chars). Override with JWT_SECRET everywhere else.
+    secret: ${JWT_SECRET:dev-only-sentinel-ai-super-secret-key-change-me-0123456789}
+  simulator:
+    enabled: true
+    default-intensity: 5
+  redis:
+    enabled: ${REDIS_ENABLED:true}
+  kafka:
+    # Dev runs the full pipeline against the local Kafka (docker compose up). If the broker is down,
+    # ingestion degrades gracefully to the synchronous path. Set KAFKA_ENABLED=false to force sync.
+    enabled: ${KAFKA_ENABLED:true}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  ai:
+    # Dev enables AI with the deterministic fake provider (no API key needed). For a real model set
+    # AI_PROVIDER=http and export LLM_API_KEY.
+    enabled: ${AI_ENABLED:true}
+    provider: ${AI_PROVIDER:fake}
+
 logging:
   level:
     com.sentinelai: DEBUG

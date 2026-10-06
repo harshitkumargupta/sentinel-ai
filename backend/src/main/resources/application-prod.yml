@@ -18,6 +18,11 @@ spring:
     baseline-on-migrate: false
     locations: classpath:db/migration
 
+sentinel:
+  security:
+    web:
+      hsts-enabled: true   # production is HTTPS-only behind the reverse proxy
+
 logging:
   level:
     com.sentinelai: INFO

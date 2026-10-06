@@ -8,9 +8,132 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  # Reject oversized multipart uploads early.
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 2MB
 
 server:
   port: ${SERVER_PORT:8080}
+  # Request-size hardening: cap request-line/headers; Tomcat swallows at most this much of an
+  # over-limit body before aborting. JSON body size/depth is further constrained in Jackson.
+  max-http-request-header-size: 16KB
+  tomcat:
+    max-swallow-size: 2MB
+    max-http-form-post-size: 2MB
+
+# JWT: secret MUST be supplied via env (JWT_SECRET) in every real environment.
+# A dev-only default is set in application-dev.yml. TTLs are in milliseconds.
+sentinel:
+  jwt:
+    secret: ${JWT_SECRET:}
+    access-token-ttl: 900000      # 15 minutes
+    refresh-token-ttl: 604800000  # 7 days
+  security:
+    max-failed-logins: 5
+    lockout-minutes: 15
+    # Password policy (enforced on create/change). Overridable per profile / env.
+    password:
+      min-length: ${PASSWORD_MIN_LENGTH:12}
+      require-upper: true
+      require-lower: true
+      require-digit: true
+      require-special: true
+      max-length: 128
+    # HTTP hardening: CORS allow-list and security response headers.
+    web:
+      hsts-enabled: false            # HTTP in dev; prod profile turns this on
+      hsts-max-age-seconds: 31536000
+      cors:
+        # Comma-separated origins via env in real environments; never '*' with credentials.
+        allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+        allow-credentials: true
+  ml:
+    enabled: ${ML_ENABLED:false}
+    base-url: ${ML_BASE_URL:http://localhost:8000}
+    timeout-ms: 800
+    max-retries: 1
+    weight-cap: 30
+    drift-sigma-threshold: 3.0
+    drift-cron: "0 */15 * * * *"
+  redis:
+    enabled: ${REDIS_ENABLED:false}
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    timeout-ms: 200
+    cache-ttl-seconds: 30
+  kafka:
+    # Master feature flag for the event-driven pipeline. When false, ingestion uses the synchronous
+    # in-process EventProcessor and no Kafka beans are created.
+    enabled: ${KAFKA_ENABLED:false}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    partitions: ${KAFKA_PARTITIONS:3}
+    replication-factor: ${KAFKA_REPLICATION_FACTOR:1}
+    concurrency: ${KAFKA_CONCURRENCY:3}
+    max-retries: ${KAFKA_MAX_RETRIES:3}
+    retry-backoff-ms: 500
+    max-retry-backoff-ms: 30000
+    relay-interval-ms: 500
+    relay-batch-size: 200
+    # Topic names — keyed by entity_key so one entity's events stay ordered per partition.
+    topics:
+      raw: events.raw
+      normalized: events.normalized
+      alerts: alerts
+      incidents: incidents.updates
+      retry: events.retry
+      dlq: events.dlq
+      ai-investigations: ai.investigations
+    # Consumer groups — one per stage, so each scales and fails independently.
+    groups:
+      raw-ingest: sentinel-raw-ingest
+      detection: sentinel-detection
+      correlation: sentinel-correlation
+      analytics: sentinel-analytics
+      notification: sentinel-notification
+      retry: sentinel-retry
+      dlq: sentinel-dlq
+      ai-investigation: sentinel-ai-investigation
+  rate-limit:
+    enabled: true
+  playbook:
+    expiry-minutes: ${PLAYBOOK_EXPIRY_MINUTES:30}
+    adapter-timeout-ms: 2000
+    adapter-max-retries: 2
+  tuning:
+    min-samples: ${TUNING_MIN_SAMPLES:20}
+    max-threshold-delta: 5
+  ai:
+    # Master feature flag. Off → every AI feature returns a deterministic fallback, no LLM contacted.
+    enabled: ${AI_ENABLED:false}
+    # 'fake' (deterministic) or 'http' (OpenAI-compatible). The API key comes ONLY from LLM_API_KEY.
+    provider: ${AI_PROVIDER:fake}
+    model: ${AI_MODEL:fake-model}
+    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    timeout-ms: 20000
+    max-tokens: 1200
+    max-retries: 2
+    template-version: v1
+    rate-limit-per-minute: 10
+    min-faithfulness: 0.5
+    budget:
+      daily-token-budget: ${AI_DAILY_TOKEN_BUDGET:2000000}
+      daily-cost-budget-usd: ${AI_DAILY_COST_USD:25.0}
+      per-org-daily-token-quota: ${AI_ORG_TOKEN_QUOTA:500000}
+  baseline:
+    min-samples: 30
+    z-threshold: 3.0
+  graph:
+    max-nodes: 100
+  detection:
+    enabled: true
+    max-linked-events: 100
+    severity-scores:
+      LOW: 25
+      MEDIUM: 50
+      HIGH: 75
+      CRITICAL: 100
 
 # OpenAPI / Swagger UI -> http://localhost:8080/swagger-ui.html
 springdoc:
@@ -20,6 +143,11 @@ springdoc:
     path: /v3/api-docs
 
 # Actuator: /api/health is our public endpoint; actuator stays under /actuator
+# Include the per-request trace id (MDC) in every log line.
+logging:
+  pattern:
+    level: "%5p [trace=%X{traceId:-}]"
+
 management:
   endpoints:
     web:
@@ -28,3 +156,27 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+      probes:
+        enabled: true
+  # Identify this app/instance in every metric + enable latency histograms (p50/p95/p99 by endpoint).
+  metrics:
+    tags:
+      application: sentinel-ai
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 50ms, 100ms, 200ms, 500ms, 1s
+  observations:
+    key-values:
+      application: sentinel-ai
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  # OpenTelemetry tracing (optional): enabled via the 'tracing' profile / OTEL_* env (see monitoring.yml).
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:0.0}
