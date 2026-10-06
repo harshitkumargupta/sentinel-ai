@@ -57,27 +57,46 @@ export default function StorylineGraph({ graph }) {
           <span className="muted small">{new Date(slider).toLocaleString()}</span>
         </div>
       )}
+      <p className="muted small" style={{ margin: '0 0 6px' }}>
+        {selected ? `Focused on ${selected.type}: ${selected.label || selected.id} — click it again or Close to reset`
+                  : 'Click a node to highlight its connections.'}
+      </p>
       <div style={{ display: 'flex', gap: '1rem' }}>
-        <svg width={W} height={height} style={{ border: '1px solid var(--border)', borderRadius: 8, maxWidth: '100%' }}>
+        <svg width={W} height={height} style={{ border: '1px solid var(--border)', borderRadius: 8, maxWidth: '100%', background: 'var(--bg-elev)' }}>
           {visibleEdges.map((e, i) => {
             const a = xy(e.source); const b = xy(e.target);
+            const active = selected && (e.source === selected.id || e.target === selected.id);
+            // Edges fade to a faint grid by default; a selected node lights up only its own edges,
+            // and only those show a label — so the view stays readable at any node count.
+            const opacity = selected ? (active ? 0.95 : 0.05) : 0.18;
             return (
               <g key={i}>
-                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--border)" strokeWidth="1.5" />
-                <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4} fontSize="9" fill="var(--muted)">
-                  {e.type}{e.count > 1 ? ` ×${e.count}` : ''}
-                </text>
+                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                  stroke={active ? 'var(--accent)' : 'var(--border-strong)'}
+                  strokeWidth={active ? 2 : 1} strokeOpacity={opacity} />
+                {active && (
+                  <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4} fontSize="10"
+                    fill="var(--text)" textAnchor="middle"
+                    style={{ paintOrder: 'stroke', stroke: 'var(--bg-elev)', strokeWidth: 3 }}>
+                    {e.type}{e.count > 1 ? ` ×${e.count}` : ''}
+                  </text>
+                )}
               </g>
             );
           })}
           {(graph.nodes ?? []).map((n) => {
             const p = xy(n.id);
+            const neighbor = selected && visibleEdges.some((e) =>
+              (e.source === selected.id && e.target === n.id) || (e.target === selected.id && e.source === n.id));
+            const dim = selected && n.id !== selected.id && !neighbor;
             return (
-              <g key={n.id} transform={`translate(${p.x},${p.y})`} style={{ cursor: 'pointer' }}
-                 onClick={() => setSelected(n)}>
-                <circle r="16" fill={TYPE_COLOR[n.type] || '#57606a'} />
+              <g key={n.id} transform={`translate(${p.x},${p.y})`} style={{ cursor: 'pointer', opacity: dim ? 0.2 : 1 }}
+                 onClick={() => setSelected(selected && selected.id === n.id ? null : n)}>
+                <circle r="16" fill={TYPE_COLOR[n.type] || '#57606a'}
+                  stroke={selected && selected.id === n.id ? 'var(--accent)' : 'transparent'} strokeWidth="3" />
                 <text textAnchor="middle" dy="4" fontSize="12">{TYPE_ICON[n.type] || '•'}</text>
-                <text textAnchor="middle" y="28" fontSize="9" fill="var(--text)">
+                <text textAnchor="middle" y="28" fontSize="9" fill="var(--text)"
+                  style={{ paintOrder: 'stroke', stroke: 'var(--bg-elev)', strokeWidth: 3 }}>
                   {(n.label || '').slice(0, 16)}
                 </text>
               </g>
