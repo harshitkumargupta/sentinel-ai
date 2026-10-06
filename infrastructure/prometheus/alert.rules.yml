@@ -1,0 +1,62 @@
+groups:
+  - name: sentinel-slo
+    rules:
+      - alert: ServiceDown
+        expr: up{job="sentinel-backend"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "SentinelAI backend is down"
+          description: "Prometheus cannot scrape the backend for >1m."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          / clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 0.001) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "API 5xx error rate > 5%"
+          description: "5xx share of requests exceeded 5% over 5m."
+
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le)) > 0.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "API p95 latency > 500ms"
+          description: "95th percentile request latency exceeded 500ms over 5m."
+
+      - alert: KafkaConsumerLag
+        expr: sum(kafka_consumer_fetch_manager_records_lag) > 1000
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Kafka consumer lag > 1000"
+          description: "Event pipeline is falling behind."
+
+      - alert: DlqGrowing
+        expr: increase(sentinel_dlq_messages_total[15m]) > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "Dead-letter queue is growing"
+          description: "Messages are landing in the DLQ."
+
+      - alert: OutboxBacklog
+        expr: sentinel_outbox_pending > 100
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Outbox backlog > 100"
+          description: "The transactional outbox relay is falling behind."
+
+      - alert: JvmHeapPressure
+        expr: |
+          jvm_memory_used_bytes{area="heap"} / clamp_min(jvm_memory_max_bytes{area="heap"}, 1) > 0.9
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "JVM heap > 90%"
+          description: "Heap usage sustained above 90%."

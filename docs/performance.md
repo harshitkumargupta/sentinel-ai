@@ -74,3 +74,33 @@ synchronous path rather than failing.
 
 > Laptop dev box, small seeded dataset and a single-node KRaft broker; absolute values scale with
 > hardware and data volume, but the sync-vs-Kafka ratio is the point of interest.
+
+---
+
+# Load tests (k6) — Phase 17
+
+Scripts in [`load-tests/`](../load-tests/). Thresholds are declared per scenario (pass/fail).
+
+**Hardware:** Apple A18 Pro, 6 cores, **8 GB RAM**, macOS 26. Dev profile.
+**Important caveat:** these numbers were captured with the backend JVM **and** the full infra
+(MySQL + Redis + Kafka in colima) **and** Prometheus + Grafana + a browser all on the *same* 8 GB
+machine. That co-location starves the write path; a dedicated host (or the prod Compose stack with
+resource limits) performs materially better. Reads, which are cache-served, are largely unaffected.
+
+| Scenario | Load | Throughput | p95 | Failures | Threshold |
+|----------|------|-----------:|----:|---------:|-----------|
+| Dashboard read mix (cached) | 50 VUs, 25s | **1,237 req/s** | **94 ms** | 0% | ✅ p95<300 |
+| Ingest (Kafka path) | 50 VUs, 25s | ~13 req/s | 4.9 s | 76% | ❌ (see caveat) |
+| Login burst (abuse) | 50 req/s arrival | — | — | all 401/429 (expected) | ✅ |
+| Mixed soak | 20w+30r VUs, 15 min | script provided | — | — | run on a real host |
+
+**Reads vs writes.** The cache-aside read path sustains ~1.2k req/s at sub-100 ms p95. The write
+path (each `POST /api/events` publishes to Kafka, then persists) is bound by Kafka+MySQL contention
+on this shared 8 GB box; a single ingest in isolation completes in **~130 ms**. On a dedicated host
+(or with `KAFKA_ENABLED=false` for the synchronous path), ingest throughput is far higher — rerun
+`k6 run load-tests/ingest.js` there to record it.
+
+**Cached vs uncached / sync vs Kafka.** Toggle `REDIS_ENABLED` (reads) and `KAFKA_ENABLED` (writes)
+on the backend and re-run the matching scenario to produce the comparison on your hardware.
+
+Raw k6 summaries: `docs/perf/*.json` (gitignored).
