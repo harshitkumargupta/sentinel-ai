@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import LoginBackdropLazy from '../components/three/LoginBackdropLazy.jsx';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -26,8 +27,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="auth-shell">
-      <form className="auth-card" onSubmit={handleSubmit}>
+    <div className="auth-shell" style={{ position: 'relative', overflow: 'hidden' }}>
+      <LoginBackdropLazy />
+      <form className="auth-card" onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
         <h1 className="brand">🛡️ SentinelAI</h1>
         <p className="subtitle">Mini Security Operations Center</p>
 

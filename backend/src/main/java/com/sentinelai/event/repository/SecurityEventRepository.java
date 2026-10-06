@@ -52,4 +52,11 @@ public interface SecurityEventRepository
             select distinct e.username from SecurityEvent e
             where e.org.id = :orgId and e.sourceIp = :ip and e.username is not null""")
     List<String> distinctUsernamesByOrgAndIp(@Param("orgId") Long orgId, @Param("ip") String ip);
+
+    /** (geoCountry, eventType, count) for attack-origin aggregation (AttackGlobe). */
+    @Query("""
+            select e.geoCountry, e.eventType, count(e) from SecurityEvent e
+            where e.org.id = :orgId and e.geoCountry is not null
+            group by e.geoCountry, e.eventType""")
+    List<Object[]> countByGeoCountryAndType(@Param("orgId") Long orgId);
 }

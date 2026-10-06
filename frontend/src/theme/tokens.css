@@ -1,0 +1,126 @@
+/*
+ * SentinelAI design tokens. Dark SOC theme is the default; [data-theme="light"] overrides.
+ * Existing variable names (--bg/--panel/--border/--text/--muted/--accent) are preserved so legacy
+ * pages keep working while new components use the fuller token set. Severity colors meet WCAG AA
+ * against their surfaces and are always paired with an icon + text (color is never the only signal).
+ */
+:root,
+:root[data-theme="dark"] {
+  /* Surfaces */
+  --bg: #0b0f14;
+  --bg-elev: #0f141b;
+  --panel: #161b22;
+  --panel-2: #1c232d;
+  --border: #30363d;
+  --border-strong: #3d4651;
+
+  /* Text */
+  --text: #e6edf3;
+  --muted: #9aa7b4;
+  --text-inverse: #0b0f14;
+
+  /* Brand / accent */
+  --accent: #3b8eea;
+  --accent-strong: #2f81f7;
+  --accent-contrast: #ffffff;
+
+  /* Status */
+  --success: #2ea043;
+  --warning: #d29922;
+  --danger: #f85149;
+  --info: #58a6ff;
+
+  /* Severity palette (bg + readable foreground) */
+  --sev-low: #2f81f7;        --sev-low-fg: #cfe3ff;
+  --sev-medium: #d29922;     --sev-medium-fg: #ffeec2;
+  --sev-high: #f0883e;       --sev-high-fg: #ffe0c7;
+  --sev-critical: #f85149;   --sev-critical-fg: #ffd3cf;
+
+  /* Chart categorical palette (color-blind-aware, brand-neutral) */
+  --chart-1: #3b8eea;
+  --chart-2: #2ea043;
+  --chart-3: #d29922;
+  --chart-4: #f0883e;
+  --chart-5: #a371f7;
+  --chart-6: #e85aad;
+
+  /* Spacing scale (4px base) */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-8: 48px;
+
+  /* Radius */
+  --radius-sm: 6px; --radius: 10px; --radius-lg: 14px; --radius-pill: 999px;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --fs-xs: 0.75rem; --fs-sm: 0.85rem; --fs-md: 0.95rem; --fs-lg: 1.15rem; --fs-xl: 1.5rem; --fs-2xl: 2rem;
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-2: 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-3: 0 12px 40px rgba(0,0,0,0.45);
+
+  /* Motion */
+  --dur-fast: 120ms; --dur: 220ms; --dur-slow: 400ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f8fa;
+  --bg-elev: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #f0f3f6;
+  --border: #d0d7de;
+  --border-strong: #b8c0c9;
+
+  --text: #1f2328;
+  --muted: #59636e;
+  --text-inverse: #ffffff;
+
+  --accent: #0969da;
+  --accent-strong: #0860ca;
+  --accent-contrast: #ffffff;
+
+  --success: #1a7f37;
+  --warning: #9a6700;
+  --danger: #cf222e;
+  --info: #0969da;
+
+  --sev-low: #0969da;        --sev-low-fg: #0a3977;
+  --sev-medium: #9a6700;     --sev-medium-fg: #4d3300;
+  --sev-high: #bc4c00;       --sev-high-fg: #5f2600;
+  --sev-critical: #cf222e;   --sev-critical-fg: #6e0c13;
+
+  --shadow-1: 0 1px 2px rgba(31,35,40,0.08);
+  --shadow-2: 0 4px 16px rgba(31,35,40,0.12);
+  --shadow-3: 0 12px 40px rgba(31,35,40,0.18);
+
+  color-scheme: light;
+}
+
+/* Honor the OS preference only when the user hasn't explicitly chosen (no data-theme set). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #f6f8fa; --bg-elev: #ffffff; --panel: #ffffff; --panel-2: #f0f3f6;
+    --border: #d0d7de; --text: #1f2328; --muted: #59636e; color-scheme: light;
+  }
+}
+
+/* Users who prefer reduced motion get no transitions/animations anywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible focus ring for keyboard users. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

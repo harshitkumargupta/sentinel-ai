@@ -56,6 +56,32 @@ public class DashboardService {
                 new TypeReference<>() {}, redisProperties.getCacheTtlSeconds(), () -> computeMitreCoverage(actor));
     }
 
+    public List<com.sentinelai.dashboard.dto.GeoFlowItem> geoFlows(AppUserPrincipal actor) {
+        return cache.getOrLoad(key(actor.getOrgId(), "geo-flows"),
+                new TypeReference<>() {}, redisProperties.getCacheTtlSeconds(), () -> computeGeoFlows(actor));
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.sentinelai.dashboard.dto.GeoFlowItem> computeGeoFlows(AppUserPrincipal actor) {
+        Map<String, Long> total = new LinkedHashMap<>();
+        Map<String, String> topType = new LinkedHashMap<>();
+        Map<String, Long> topTypeCount = new LinkedHashMap<>();
+        for (Object[] row : securityEventRepository.countByGeoCountryAndType(actor.getOrgId())) {
+            String country = (String) row[0];
+            String type = String.valueOf(row[1]);
+            long count = (Long) row[2];
+            total.merge(country, count, Long::sum);
+            if (count > topTypeCount.getOrDefault(country, 0L)) {
+                topTypeCount.put(country, count);
+                topType.put(country, type);
+            }
+        }
+        return total.entrySet().stream()
+                .map(e -> new com.sentinelai.dashboard.dto.GeoFlowItem(e.getKey(), e.getValue(), topType.get(e.getKey())))
+                .sorted((a, b) -> Long.compare(b.count(), a.count()))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public DashboardSummary computeSummary(AppUserPrincipal actor) {
         Long org = actor.getOrgId();

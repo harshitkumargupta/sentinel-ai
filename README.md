@@ -197,7 +197,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [x] **Phase 13** — SOAR-lite playbooks (human-approved response actions), analyst feedback → tuning loop, similar-incident lookup
 - [x] **Phase 14** — Security hardening (OWASP Top 10), static/dependency/dynamic scanning, threat model
 - [x] **Phase 15** — CI/CD (GitHub Actions → GHCR), zero-cost deploy (Compose + Caddy + Cloudflare Tunnel), rollback/backup
-- [ ] **Phase 16** — Observability (Prometheus/Grafana dashboards)
+- [x] **Phase 16** — UI/UX design system + command-center dashboard + lazy-loaded Three.js visuals (AttackGlobe, ThreatCore)
+- [ ] **Phase 17b** — Observability (Prometheus/Grafana dashboards)
 - [ ] **Phase 17** — Kubernetes manifests
 - [ ] **Phase 18** — AWS deployment & managed CI/CD to cloud
 
@@ -491,3 +492,4 @@ See [`docs/security/`](docs/security/): [threat model](docs/security/threat-mode
 - [SOAR-lite playbooks (state machine & safety rules)](docs/playbooks.md)
 - [Deployment (zero-cost: Compose + Caddy + Cloudflare Tunnel)](docs/deployment.md) · [ADR-003: zero-cost deploy](docs/adr/ADR-003-zero-cost-deploy.md)
 - [Security: threat model & scans](docs/security/threat-model.md)
+- [UI design system & Three.js visuals](docs/ui-design.md)
