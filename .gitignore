@@ -47,3 +47,8 @@ infrastructure/docker/.deploy-state
 backups/
 
 docs/perf/
+
+# ---- Keys / certs ----
+*.pem
+*.key
+*.p12
