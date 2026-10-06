@@ -1,0 +1,33 @@
+# SentinelAI reverse proxy.
+# SITE_ADDRESS controls the mode:
+#   :80            -> plain HTTP (local/VM without a domain)
+#   example.com    -> Caddy obtains and renews a Let's Encrypt cert automatically (HTTPS)
+{$SITE_ADDRESS:-:80} {
+	encode gzip
+
+	# API traffic to the backend.
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+	handle /actuator/* {
+		reverse_proxy backend:8080
+	}
+	handle /swagger-ui/* {
+		reverse_proxy backend:8080
+	}
+	handle /v3/api-docs/* {
+		reverse_proxy backend:8080
+	}
+
+	# Everything else is the SPA, served by the frontend nginx container.
+	handle {
+		reverse_proxy frontend:8080
+	}
+
+	# Baseline security headers at the edge (defence in depth; app sets its own too).
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+}

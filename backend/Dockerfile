@@ -2,11 +2,11 @@
 # ---- Build stage: compile and package the Spring Boot jar on JDK 21 ----
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
-# Cache dependencies first (pom changes rarely relative to source).
+# Resolve dependencies first (pom changes rarely relative to source) so the layer caches well.
 COPY pom.xml .
-RUN mvn -q -B -o dependency:go-offline || mvn -q -B dependency:go-offline
+RUN mvn -B -ntp dependency:go-offline
 COPY src ./src
-RUN mvn -q -B clean package -DskipTests
+RUN mvn -B -ntp clean package -DskipTests
 
 # ---- Runtime stage: minimal JRE, non-root, read-only-friendly ----
 FROM eclipse-temurin:21-jre AS runtime
