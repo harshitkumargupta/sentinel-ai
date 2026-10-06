@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // End-to-end smoke: login → dashboard → open incident → investigate → approve action.
 // Credentials come from env (ADMIN_USER/ADMIN_PASS), defaulting to the dev seed admin.
 const USER = process.env.ADMIN_USER || 'admin';
-const PASS = process.env.ADMIN_PASS || 'Admin@12345';
+const PASS = process.env.ADMIN_PASS || 'Admin@123';
 
 async function login(page) {
   await page.goto('/login');
