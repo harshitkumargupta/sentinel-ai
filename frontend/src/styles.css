@@ -62,23 +62,33 @@ body {
 }
 
 .auth-card button,
-button {
-  margin-top: 1.25rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 8px;
-  border: none;
-  background: var(--accent);
-  color: white;
+/* Legacy bare <button> (not the .ui-btn component, which styles itself). */
+button:not([class]) {
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--accent-strong, var(--accent));
+  background: var(--accent-strong, var(--accent));
+  color: var(--accent-contrast, #fff);
   font-weight: 600;
   cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
 }
+button:not([class]):hover { filter: brightness(1.08); }
+button:not([class]):active { transform: translateY(1px); }
 
 button.ghost {
   margin: 0;
-  background: transparent;
+  padding: 0.45rem 0.8rem;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--panel-2, transparent);
   border: 1px solid var(--border);
   color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
 }
+button.ghost:hover { background: var(--panel); }
+
+.auth-card button { margin-top: 1.25rem; }
 
 .hint {
   margin-top: 1rem;
@@ -125,12 +135,15 @@ button.ghost {
 .tile {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow-1);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  transition: border-color 160ms ease, transform 160ms ease;
 }
+.tile:hover { border-color: var(--border-strong); transform: translateY(-1px); }
 
 .tile-value {
   font-size: 1.75rem;
@@ -145,9 +158,12 @@ button.ghost {
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-4, 1.25rem);
+  margin-bottom: var(--sp-4, 1rem);
 }
+.panel > h3:first-child { margin-top: 0; }
 
 .code-block {
   background: var(--bg);
@@ -246,29 +262,47 @@ button.ghost {
   align-items: center;
   margin: 0.75rem 0;
 }
-.filters input, .filters select {
-  padding: 0.4rem 0.5rem;
-  border-radius: 8px;
+.filters input, .filters select,
+.content input:not([type="range"]):not([class]), .content select:not([class]) {
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm, 8px);
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--bg-elev, var(--bg));
   color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm, 0.88rem);
 }
+.filters input:hover, .filters select:hover { border-color: var(--border-strong); }
 .filters label { font-size: 0.85rem; color: var(--muted); }
+
+/* Page headings */
+.content h2 { font-size: var(--fs-xl, 1.5rem); margin: 0 0 var(--sp-4, 1rem); }
+.content h3 { font-size: var(--fs-lg, 1.15rem); }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
+  overflow: hidden;
+  border-radius: var(--radius-sm, 8px);
 }
 .data-table th, .data-table td {
   text-align: left;
-  padding: 0.5rem 0.6rem;
+  padding: 0.6rem 0.75rem;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
-.data-table th { color: var(--muted); font-weight: 600; }
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-2, var(--panel));
+  color: var(--muted);
+  font-weight: 700;
+  z-index: 1;
+}
+.data-table tbody tr:hover { background: var(--panel-2, var(--panel)); }
 tr.clickable { cursor: pointer; }
-tr.clickable:hover { background: var(--panel); }
+tr.clickable:hover { background: var(--panel-2, var(--panel)); }
 
 .state-box { padding: 1.25rem; color: var(--text); }
 .small { font-size: 0.75rem; }

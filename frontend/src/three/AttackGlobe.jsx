@@ -4,6 +4,8 @@ import { useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { pixelRatioCap } from './webgl.js';
 import { HOME, SEV_HEX, coordsFor, severityForType } from './geo.js';
+import countriesTopo from 'world-atlas/countries-110m.json';
+import { mesh as topoMesh } from 'topojson-client';
 
 const R = 1.4;
 const MAX_ARCS = 40;
@@ -16,6 +18,30 @@ function latLonToVec3(lat, lon, radius) {
     -radius * Math.sin(phi) * Math.cos(theta),
     radius * Math.cos(phi),
     radius * Math.sin(phi) * Math.sin(theta),
+  );
+}
+
+/** Every country border, drawn as line segments projected onto the sphere (all countries shown). */
+function CountryBorders() {
+  const positions = useMemo(() => {
+    const borders = topoMesh(countriesTopo, countriesTopo.objects.countries); // MultiLineString
+    const pts = [];
+    for (const line of borders.coordinates) {
+      for (let i = 0; i < line.length - 1; i++) {
+        const a = latLonToVec3(line[i][1], line[i][0], R * 1.002);
+        const b = latLonToVec3(line[i + 1][1], line[i + 1][0], R * 1.002);
+        pts.push(a.x, a.y, a.z, b.x, b.y, b.z);
+      }
+    }
+    return new Float32Array(pts);
+  }, []);
+  return (
+    <lineSegments>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" array={positions} count={positions.length / 3} itemSize={3} />
+      </bufferGeometry>
+      <lineBasicMaterial color="#6fc3ff" transparent opacity={0.55} />
+    </lineSegments>
   );
 }
 
@@ -81,16 +107,26 @@ function Globe({ flows }) {
 
   return (
     <group ref={group}>
+      {/* Solid ocean sphere (lit so it reads as a globe, not a black ball). */}
       <mesh>
-        <sphereGeometry args={[R, 36, 36]} />
-        <meshStandardMaterial color="#12202f" emissive="#0a141f" wireframe opacity={0.5} transparent />
+        <sphereGeometry args={[R * 0.99, 48, 48]} />
+        <meshStandardMaterial color="#13344f" emissive="#0b2238" emissiveIntensity={0.6}
+          metalness={0.2} roughness={0.75} />
       </mesh>
+      {/* Faint lat/long graticule under the country borders. */}
       <mesh>
-        <sphereGeometry args={[R * 0.995, 36, 36]} />
-        <meshStandardMaterial color="#0d1b27" />
+        <sphereGeometry args={[R, 36, 24]} />
+        <meshBasicMaterial color="#2f6b9e" wireframe transparent opacity={0.12} />
+      </mesh>
+      {/* Real country borders. */}
+      <CountryBorders />
+      {/* Subtle atmosphere glow. */}
+      <mesh>
+        <sphereGeometry args={[R * 1.08, 48, 48]} />
+        <meshBasicMaterial color="#3b8eea" transparent opacity={0.08} side={THREE.BackSide} />
       </mesh>
       <mesh position={home}>
-        <sphereGeometry args={[0.04, 12, 12]} />
+        <sphereGeometry args={[0.05, 14, 14]} />
         <meshBasicMaterial color="#3ddc97" />
       </mesh>
       {arcs.map((a, i) => (
