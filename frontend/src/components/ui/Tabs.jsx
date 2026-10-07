@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 
 /**
- * Tabs — accessible tab list (roving via arrow keys handled by native buttons + aria-selected).
+ * Tabs — accessible tab list with a sliding underline indicator (framer layoutId).
  * `tabs` is [{ id, label, content }]. Uncontrolled by default.
  */
 export default function Tabs({ tabs, initial }) {
@@ -19,6 +20,10 @@ export default function Tabs({ tabs, initial }) {
             onClick={() => setActive(t.id)}
           >
             {t.label}
+            {t.id === active && (
+              <motion.span layoutId="tab-underline" className="ui-tab__underline" aria-hidden="true"
+                transition={{ type: 'spring', stiffness: 500, damping: 40 }} />
+            )}
           </button>
         ))}
       </div>

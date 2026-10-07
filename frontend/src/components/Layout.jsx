@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Outlet, useLocation } from 'react-router-dom';
 import NavBar from './NavBar.jsx';
 import RouteProgress from './RouteProgress.jsx';
+import OnboardingTour from './OnboardingTour.jsx';
 
 /**
  * Persistent app shell: the sidebar + top bar stay mounted (so the sliding active pill animates
@@ -14,6 +15,7 @@ export default function Layout() {
   return (
     <div className="app-shell">
       <RouteProgress />
+      <OnboardingTour />
       <NavBar />
       <main className="content">
         <AnimatePresence mode="wait">

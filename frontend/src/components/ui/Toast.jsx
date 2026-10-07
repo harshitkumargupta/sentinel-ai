@@ -11,8 +11,8 @@ export function ToastProvider({ children }) {
   const dismiss = useCallback((id) => setToasts((t) => t.filter((x) => x.id !== id)), []);
   const push = useCallback((message, opts = {}) => {
     const id = ++idRef.current;
-    setToasts((t) => [...t, { id, message, variant: opts.variant || 'info' }]);
     const ttl = opts.ttl ?? 4000;
+    setToasts((t) => [...t, { id, message, variant: opts.variant || 'info', ttl }]);
     if (ttl) setTimeout(() => dismiss(id), ttl);
     return id;
   }, [dismiss]);
@@ -24,9 +24,15 @@ export function ToastProvider({ children }) {
         <AnimatePresence>
           {toasts.map((t) => (
             <motion.div key={t.id} className={`ui-toast ui-toast--${t.variant}`} role="status"
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
               onClick={() => dismiss(t.id)}>
-              {t.message}
+              <span>{t.message}</span>
+              {t.ttl > 0 && (
+                <motion.span className="ui-toast__timer" aria-hidden="true"
+                  initial={{ scaleX: 1 }} animate={{ scaleX: 0 }}
+                  transition={{ duration: t.ttl / 1000, ease: 'linear' }} />
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
