@@ -135,21 +135,29 @@ export default function DashboardPage() {
                 <DashboardCharts sevData={sevData} typeData={typeData} />
               </Suspense>
 
-              <Card title="MITRE ATT&CK coverage" className="dash-grid__mitre">
-                {data.mitre.length === 0 ? <EmptyState title="No techniques yet" /> : (
-                  <div className="mitre-heat" role="img" aria-label="MITRE technique heatmap">
-                    {data.mitre.map((m) => {
-                      const t = m.alertCount / maxMitre;
-                      return (
-                        <div key={m.technique} className="mitre-cell"
-                          title={`${m.technique}: ${m.alertCount} alerts, ${m.ruleCount} rules`}
-                          style={{ background: m.alertCount === 0 ? 'var(--panel-2)' : `color-mix(in srgb, var(--danger) ${20 + t * 70}%, transparent)` }}>
-                          <span>{m.technique}</span>
-                          <strong>{m.alertCount}</strong>
-                        </div>
-                      );
-                    })}
-                  </div>
+              <Card title="MITRE ATT&CK coverage" subtitle={data.mitre.length ? `${data.mitre.length} technique${data.mitre.length === 1 ? '' : 's'}` : undefined}
+                className="dash-grid__mitre">
+                {data.mitre.length === 0 ? <EmptyState title="No techniques yet" message="Mapped techniques appear as detections fire." /> : (
+                  <>
+                    <div className="mitre-heat" role="img" aria-label="MITRE technique heatmap">
+                      {data.mitre.map((m) => {
+                        const t = m.alertCount / maxMitre;
+                        return (
+                          <div key={m.technique} className={`mitre-cell${m.alertCount === 0 ? ' mitre-cell--empty' : ''}`}
+                            title={`${m.technique}: ${m.alertCount} alerts, ${m.ruleCount} rules`}
+                            style={m.alertCount === 0 ? undefined : { background: `color-mix(in srgb, var(--danger) ${20 + t * 70}%, transparent)` }}>
+                            <span>{m.technique}</span>
+                            <strong>{m.alertCount}</strong>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mitre-scale">
+                      <span>fewer alerts</span>
+                      <span className="mitre-scale__ramp" aria-hidden="true" />
+                      <span>more</span>
+                    </div>
+                  </>
                 )}
               </Card>
 
