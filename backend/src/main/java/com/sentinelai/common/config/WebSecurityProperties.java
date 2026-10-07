@@ -33,6 +33,13 @@ public class WebSecurityProperties {
     public static class Cors {
         /** Exact allowed origins — no wildcard when credentials are allowed. */
         private List<String> allowedOrigins = List.of("http://localhost:5173");
+        /**
+         * Allowed origin patterns (may contain '*'). Unlike {@code allowedOrigins}, these are safe
+         * with credentials because Spring reflects the matched origin rather than sending '*'. Used
+         * for dynamic hosts such as Cloudflare quick-tunnel URLs (e.g. {@code https://*.trycloudflare.com})
+         * whose subdomain changes on every restart.
+         */
+        private List<String> allowedOriginPatterns = List.of();
         private List<String> allowedMethods = List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
         private List<String> allowedHeaders = List.of("Authorization", "Content-Type", "X-API-Key", "X-Requested-With");
         private List<String> exposedHeaders = List.of("X-Trace-Id");

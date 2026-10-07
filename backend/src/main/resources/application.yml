@@ -48,6 +48,8 @@ sentinel:
       cors:
         # Comma-separated origins via env in real environments; never '*' with credentials.
         allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+        # Credential-safe wildcard patterns for dynamic hosts (e.g. Cloudflare quick tunnels), empty by default.
+        allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:}
         allow-credentials: true
   ml:
     enabled: ${ML_ENABLED:false}
