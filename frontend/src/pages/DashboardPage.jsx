@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import NavBar from '../components/NavBar.jsx';
 import TuningCard from '../components/TuningCard.jsx';
 import ThreatCoreLazy from '../components/three/ThreatCoreLazy.jsx';
@@ -28,7 +29,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [paused, setPaused] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
+  const [countryFilter, setCountryFilter] = useState(null);
   const seen = useRef(new Set());
+  const navigate = useNavigate();
+
+  // Clicking a source on the globe filters the live feed to that origin and lets the analyst jump
+  // straight to the related incidents.
+  const selectCountry = useCallback((cc) => {
+    setCountryFilter(cc);
+    setPaused(true); // freeze the feed so the filtered view doesn't shift under the analyst.
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -68,6 +78,10 @@ export default function DashboardPage() {
     .filter((d) => d.value > 0).sort((a, b) => b.value - a.value).slice(0, 6), [data.summary]);
   const maxMitre = Math.max(1, ...data.mitre.map((m) => m.alertCount));
   const eventsPerMin = data.summary ? (data.summary.eventsLast24h / 1440) : 0;
+  const shownEvents = useMemo(
+    () => (countryFilter ? events.filter((e) => e.geoCountry === countryFilter) : events),
+    [events, countryFilter],
+  );
 
   const eventColumns = [
     { key: 'eventTimestamp', header: 'Time', sortable: true, width: 150,
@@ -114,7 +128,7 @@ export default function DashboardPage() {
 
             <div className="dash-grid">
               <Card title="Attack origins" subtitle="Live geo flows to protected sites" className="dash-grid__globe">
-                <AttackGlobeLazy flows={data.geo} height={320} />
+                <AttackGlobeLazy flows={data.geo} height={320} onSelectCountry={selectCountry} />
               </Card>
 
               <Suspense fallback={<><Card title="Events by severity"><SkeletonLines lines={3} /></Card><Card title="Top event types"><SkeletonLines lines={3} /></Card></>}>
@@ -158,8 +172,15 @@ export default function DashboardPage() {
 
             <Card title="Live event stream" subtitle={paused ? 'paused' : 'auto-refreshing'}
               style={{ marginTop: 'var(--sp-4)' }}>
-              <Table columns={eventColumns} rows={events} rowKey={(r) => r.id} newRowKeys={newIds}
-                maxHeight={320} emptyLabel="No recent events" />
+              {countryFilter && (
+                <div className="feed-filter">
+                  <span>Filtered to <strong>{countryFilter}</strong></span>
+                  <button className="ui-btn ui-btn--sm" onClick={() => navigate('/incidents')}>Open incidents →</button>
+                  <button className="ui-btn ui-btn--sm" onClick={() => { setCountryFilter(null); setPaused(false); }}>Clear ✕</button>
+                </div>
+              )}
+              <Table columns={eventColumns} rows={shownEvents} rowKey={(r) => r.id} newRowKeys={newIds}
+                maxHeight={320} emptyLabel={countryFilter ? `No recent events from ${countryFilter}` : 'No recent events'} />
             </Card>
 
             <div style={{ marginTop: 'var(--sp-4)' }}><TuningCard /></div>

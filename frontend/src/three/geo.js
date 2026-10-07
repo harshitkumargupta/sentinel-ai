@@ -1,6 +1,9 @@
-// NOTE: this module must stay free of `three` imports — it is reached from the main bundle (the 2D
-// globe fallback uses COUNTRY_COORDS/severity helpers), so importing three here would pull the whole
-// 3D engine into the main chunk. The three.js projection helper lives in AttackGlobe.jsx.
+// NOTE: this module must stay free of `three` imports — it is reached from the main chunk (the 2D
+// globe fallback and the side panel use these helpers), so importing three here would pull the whole
+// 3D engine into the main bundle. The pure lat/lon → XYZ projection lives here so it can be unit
+// tested without a WebGL/three runtime; AttackGlobe.jsx wraps the result in a THREE.Vector3.
+
+const DEG = Math.PI / 180;
 
 /** Approximate centroid coordinates [lat, lon] for common country codes. */
 export const COUNTRY_COORDS = {
@@ -12,11 +15,23 @@ export const COUNTRY_COORDS = {
   NO: [62, 10], FI: [64, 26], RO: [46, 25], CZ: [49.8, 15.5], HK: [22.3, 114.2],
 };
 
-/** Our protected site (arc destination). */
-export const HOME = [37.77, -122.42]; // placeholder HQ
-
 export function coordsFor(country) {
   return COUNTRY_COORDS[String(country || '').toUpperCase()] || null;
+}
+
+/**
+ * Project geographic [lat, lon] onto a sphere of the given radius, returning a plain {x, y, z}.
+ * Convention (verified against the earth model's orientation): north pole at +Y, lat/lon in degrees.
+ * `yawDeg` rotates around the polar axis to calibrate the overlay to the model's texture seam.
+ */
+export function latLonToXYZ(lat, lon, radius = 1, yawDeg = 0) {
+  const phi = (90 - lat) * DEG;
+  const theta = (lon + 180 + yawDeg) * DEG;
+  return {
+    x: -radius * Math.sin(phi) * Math.cos(theta),
+    y: radius * Math.cos(phi),
+    z: radius * Math.sin(phi) * Math.sin(theta),
+  };
 }
 
 /** Severity bucket from an event type / count, for arc color. */
@@ -28,4 +43,4 @@ export function severityForType(type) {
   return 'LOW';
 }
 
-export const SEV_HEX = { LOW: '#38bdf8', MEDIUM: '#f0b429', HIGH: '#ff8c42', CRITICAL: '#ff5a5f' };
+export const SEV_HEX = { LOW: '#3ddc97', MEDIUM: '#f0b429', HIGH: '#ff8c42', CRITICAL: '#ff5a5f' };

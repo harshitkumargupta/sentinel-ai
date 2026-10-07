@@ -31,6 +31,10 @@ Thumbs.db
 dist/
 build/
 
+# ---- Archives (never commit source art/model bundles) ----
+*.rar
+*.zip
+
 # Redis snapshot (local dev)
 dump.rdb
 *.rdb
