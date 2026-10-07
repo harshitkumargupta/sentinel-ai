@@ -7,7 +7,7 @@ is gitignored and the admin password is saved outside the repo at
 
 ## Public URL
 
-- **https://monitored-selecting-cookie-sms.trycloudflare.com**
+- **https://def-seemed-heel-arthritis.trycloudflare.com** _(quick tunnel restarted 2026-10-07; valid only while the current `cloudflared` runs)_
 - Admin username: `socadmin` (password in `~/Desktop/sentinel-admin-password.txt`).
 - Dev/seed logins (`admin`, `analyst`, `viewer`) are **disabled** on this stack (prod profile does not
   seed them) and return 401.
