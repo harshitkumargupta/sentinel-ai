@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import { listEvents } from '../services/events.service.js';
@@ -66,9 +65,7 @@ export default function EventsPage() {
   const rows = nlResult ? nlResult.results : (page?.content ?? []);
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <h2>Events</h2>
 
         <form className="filters" onSubmit={runNlSearch}>
@@ -122,7 +119,6 @@ export default function EventsPage() {
             </tbody>
           </table>
         </DataState>
-      </main>
 
       {selected && (
         <div className="drawer" onClick={() => setSelected(null)}>
@@ -135,6 +131,6 @@ export default function EventsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

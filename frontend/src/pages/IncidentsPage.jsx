@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import { listIncidents } from '../services/incidents.service.js';
@@ -30,9 +29,7 @@ export default function IncidentsPage() {
   const rows = page?.content ?? [];
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <h2>Incidents</h2>
         <div className="filters">
           <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
@@ -69,7 +66,6 @@ export default function IncidentsPage() {
             </tbody>
           </table>
         </DataState>
-      </main>
-    </div>
+    </>
   );
 }

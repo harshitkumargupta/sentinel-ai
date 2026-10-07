@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
@@ -30,9 +29,7 @@ export default function AlertsPage() {
   const rows = page?.content ?? [];
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <h2>Alerts</h2>
         <DataState loading={loading} error={error} empty={rows.length === 0} emptyText="No alerts yet.">
           <table className="data-table">
@@ -53,7 +50,6 @@ export default function AlertsPage() {
             </tbody>
           </table>
         </DataState>
-      </main>
-    </div>
+    </>
   );
 }

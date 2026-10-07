@@ -98,3 +98,21 @@ mounts:
 | three.js engine (`react-three-fiber`) | 803 KB | 217 KB (lazy) |
 | Recharts (`DashboardCharts`) | ~330 KB | ~95 KB (lazy) |
 | AttackGlobe / Storyline3D / ThreatCore scenes | 1–46 KB each | lazy |
+
+## Phase 18 — premium design system & motion
+
+### Design tokens (`theme/tokens.css`)
+- **Surfaces:** deep-navy base (`--bg #080b12`) with layered elevations (`--bg-elev`, `--panel`, `--panel-2`).
+- **Primary:** electric blue → cyan gradient — `--gradient-primary`, soft variant `--gradient-primary-soft`, and `--glow-primary` for hover glow.
+- **Status:** `--success` / `--warning` / `--danger` / `--info`.
+- **Severity (refined):** LOW green `--sev-low`, MEDIUM amber, HIGH orange, CRITICAL red (`--sev-critical-glow` soft glow). Always paired with text/icon — colour is never the only signal. WCAG AA on their surfaces.
+- **Glass:** `--glass-bg` (translucent), `--glass-border` (1px gradient), `--glass-blur`; applied to `.ui-card`.
+- **Fonts (self-hosted, no external requests):** Inter for UI (`--font-sans`), JetBrains Mono for data (`--font-mono`) via `@fontsource/*`.
+
+### Motion
+- **Setting:** global Motion = **Full / Reduced / Off** (top bar), persisted, stored on `:root[data-motion]`. It also forces the 3D globe quality to Off when Reduced/Off, and is honoured app-wide via framer-motion `<MotionConfig reducedMotion>` plus a CSS rule. OS `prefers-reduced-motion` is respected automatically.
+- **Navigation:** a single sliding active pill (framer `layoutId="nav-pill"`) animates between sidebar items; icons scale on hover. The shell (sidebar + top bar) is persistent (`components/Layout.jsx`) so only page content transitions.
+- **Page transitions:** fade + slight slide between routes via `AnimatePresence`; a slim gradient route-progress bar sweeps across the top (`components/RouteProgress.jsx`).
+- **Buttons:** variants (primary gradient, secondary, ghost, danger, success) with hover lift + glow, press scale-down, click ripple, a loading spinner that morphs the label, and a success check.
+- **Data:** KPI number counters (`StatTile`), staggered card entrance (`.stagger-in`), charts/heatmap animate in.
+- **Rules:** animate transform/opacity only; heavy animation code is lazy-loaded; focus rings stay visible; touch targets ≥ 44px; responsive to phone width.

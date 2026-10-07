@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../theme/ThemeProvider.jsx';
@@ -29,7 +30,7 @@ function readCollapsed() {
  */
 export default function NavBar() {
   const { user, logout, hasRole } = useAuth();
-  const { theme, toggleTheme, quality, setQuality } = useTheme();
+  const { theme, toggleTheme, quality, setQuality, motion: motionPref, setMotion } = useTheme();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -66,8 +67,16 @@ export default function NavBar() {
         <nav className="shell-nav">
           {links.map((n) => (
             <NavLink key={n.to} to={n.to} className="shell-navlink" title={n.label}>
-              <span className="shell-navlink__icon" aria-hidden="true">{n.icon}</span>
-              {!collapsed && <span>{n.label}</span>}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.span layoutId="nav-pill" className="shell-navlink__pill" aria-hidden="true"
+                      transition={{ type: 'spring', stiffness: 520, damping: 40 }} />
+                  )}
+                  <span className="shell-navlink__icon" aria-hidden="true">{n.icon}</span>
+                  {!collapsed && <span className="shell-navlink__text">{n.label}</span>}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -93,8 +102,24 @@ export default function NavBar() {
             <option value="low">3D: Low</option>
             <option value="off">3D: Off</option>
           </select>
-          <button className="ui-btn ui-btn--ghost ui-btn--icon" onClick={toggleTheme}
-            aria-label="Toggle theme" title="Toggle light/dark">{theme === 'dark' ? '☀' : '☾'}</button>
+          <select className="shell-site" aria-label="Motion" value={motionPref}
+            onChange={(e) => setMotion(e.target.value)} title="Interface motion">
+            <option value="full">Motion: Full</option>
+            <option value="reduced">Motion: Reduced</option>
+            <option value="off">Motion: Off</option>
+          </select>
+          <button className="ui-btn ui-btn--ghost ui-btn--icon theme-toggle" onClick={toggleTheme}
+            aria-label="Toggle theme" title="Toggle light/dark">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span key={theme} aria-hidden="true"
+                initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.25 }}>
+                {theme === 'dark' ? '☀' : '☾'}
+              </motion.span>
+            </AnimatePresence>
+          </button>
           <span className="user-email">{user?.username} <span className="role-chip">{user?.role}</span></span>
           <button className="ui-btn ui-btn--ghost ui-btn--sm" onClick={handleLogout}>Sign out</button>
         </div>

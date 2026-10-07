@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
@@ -60,9 +59,7 @@ export default function IncidentDetailPage() {
   const canTriage = hasRole('ANALYST', 'ADMIN');
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <DataState loading={loading} error={error} empty={!inc} emptyText="Incident not found.">
           {inc && (
             <>
@@ -157,7 +154,6 @@ export default function IncidentDetailPage() {
             </>
           )}
         </DataState>
-      </main>
-    </div>
+    </>
   );
 }

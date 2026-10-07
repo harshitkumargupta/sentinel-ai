@@ -1,6 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import NavBar from '../components/NavBar.jsx';
 import TuningCard from '../components/TuningCard.jsx';
 import ThreatCoreLazy from '../components/three/ThreatCoreLazy.jsx';
 import AttackGlobeLazy from '../components/three/AttackGlobeLazy.jsx';
@@ -94,9 +93,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <div className="dash-head">
           <div className="dash-head__title">
             <ThreatCoreLazy size={44} level={level} />
@@ -118,7 +115,7 @@ export default function DashboardPage() {
           <Card><SkeletonLines lines={4} /></Card>
         ) : (
           <>
-            <div className="kpi-row">
+            <div className="kpi-row stagger-in">
               <Card><StatTile label="Open incidents" value={Number(data.summary?.incidentsByStatus?.OPEN || 0)} /></Card>
               <Card><StatTile label="Events / min" value={Number(eventsPerMin.toFixed(1))} /></Card>
               <Card><StatTile label="Alert reduction" value={data.reduction?.reductionPct || 0} suffix="%" /></Card>
@@ -126,7 +123,7 @@ export default function DashboardPage() {
               <Card><StatTile label="Critical+High" value={Number((data.summary?.incidentsBySeverity?.CRITICAL || 0) + (data.summary?.incidentsBySeverity?.HIGH || 0))} /></Card>
             </div>
 
-            <div className="dash-grid">
+            <div className="dash-grid stagger-in">
               <Card title="Attack origins" subtitle="Live geo flows to protected sites" className="dash-grid__globe">
                 <AttackGlobeLazy flows={data.geo} height={320} onSelectCountry={selectCountry} />
               </Card>
@@ -194,7 +191,6 @@ export default function DashboardPage() {
             <div style={{ marginTop: 'var(--sp-4)' }}><TuningCard /></div>
           </>
         )}
-      </main>
-    </div>
+    </>
   );
 }

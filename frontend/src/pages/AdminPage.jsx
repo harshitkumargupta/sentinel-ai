@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
@@ -80,9 +79,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <h2>Admin</h2>
 
         <section className="panel">
@@ -142,7 +139,6 @@ export default function AdminPage() {
             </table>
           </DataState>
         </section>
-      </main>
-    </div>
+    </>
   );
 }
