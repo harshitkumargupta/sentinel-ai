@@ -173,6 +173,23 @@
 
     <build>
         <plugins>
+            <!--
+              Testcontainers: tell Ryuk to bind-mount the daemon's standard socket path
+              (/var/run/docker.sock), which is valid both on CI runners and inside the colima VM.
+              Harmless with Docker Desktop (same path); fixes colima, where the client socket lives at
+              ~/.colima/.../docker.sock and cannot be bind-mounted directly. The client socket itself
+              is configured per-developer in ~/.testcontainers.properties (docker.host).
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>/var/run/docker.sock</TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

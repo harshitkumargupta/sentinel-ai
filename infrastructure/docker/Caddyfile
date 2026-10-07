@@ -9,15 +9,10 @@
 	handle /api/* {
 		reverse_proxy backend:8080
 	}
-	handle /actuator/* {
-		reverse_proxy backend:8080
-	}
-	handle /swagger-ui/* {
-		reverse_proxy backend:8080
-	}
-	handle /v3/api-docs/* {
-		reverse_proxy backend:8080
-	}
+
+	# Operational surfaces are NOT exposed publicly: actuator is scraped on the internal network
+	# (Prometheus -> backend:8080 directly), and API docs / Swagger UI stay off the public edge.
+	# Requests to these fall through to the SPA handler below (they never reach the backend).
 
 	# Everything else is the SPA, served by the frontend nginx container.
 	handle {

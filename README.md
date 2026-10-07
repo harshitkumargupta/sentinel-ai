@@ -515,9 +515,9 @@ Observability: `docker compose -f infrastructure/docker/monitoring.yml up -d` �
 
 ## Screenshots
 
-| Command center | Attack globe + charts | Grafana |
+| Command center | Attack globe (live arcs) | Grafana |
 |---|---|---|
-| ![dashboard](docs/screenshots/02-dashboard.png) | ![light](docs/screenshots/03-dashboard-light.png) | ![grafana](docs/screenshots/05-grafana.png) |
+| ![dashboard](docs/screenshots/02-dashboard.png) | ![attack globe](docs/screenshots/attack-globe.png) | ![grafana](docs/screenshots/05-grafana.png) |
 
 ## Results (seeded, single 8 GB node — see limitations)
 
@@ -539,6 +539,15 @@ Branch `feature/*` from `develop`; Conventional Commits; `mvn clean verify` + `n
 pass; open a PR into `develop`. `main` is releasable. See [docs/engineering-standards.md](docs/engineering-standards.md) for engineering
 standards.
 
+## Credits
+
+- **Attack globe earth model:** "Earth Photorealistic 2K" by **gerhald3d (Jadevich)** —
+  [Sketchfab](https://sketchfab.com/models/f972fb1858324bac80e31440ef7b1f5a) ·
+  [TurboSquid](https://www.turbosquid.com/Search/Index.cfm?keyword=gerhald3d+earth). Used under the
+  TurboSquid Royalty-Free License with attribution. Full details and conversion notes in
+  [docs/credits.md](docs/credits.md).
+
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Third-party assets retain their own licenses; see
+[docs/credits.md](docs/credits.md).
