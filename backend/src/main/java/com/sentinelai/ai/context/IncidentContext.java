@@ -25,9 +25,15 @@ public record IncidentContext(
     public record RiskFactor(String name, int points, String reason) {
     }
 
+    /** {@code host} is the endpoint name when the event's entity key is {@code host:<name>}. */
     public record EventSummary(Long id, String type, String severity, String sourceIp,
                                String username, String resource, String userAgent,
-                               String geoCountry, String timestamp) {
+                               String geoCountry, String timestamp, String host) {
+
+        public EventSummary(Long id, String type, String severity, String sourceIp, String username,
+                            String resource, String userAgent, String geoCountry, String timestamp) {
+            this(id, type, severity, sourceIp, username, resource, userAgent, geoCountry, timestamp, null);
+        }
     }
 
     public record TimelineItem(String type, String actor, String at) {

@@ -44,6 +44,7 @@ public class SecurityConfig {
             "/api/health",
             "/api/auth/login",
             "/api/auth/refresh",
+            "/api/public/demo",
             "/actuator/health",
             "/actuator/health/**",
             "/actuator/info",
@@ -107,6 +108,13 @@ public class SecurityConfig {
         WebSecurityProperties.Cors c = webSecurity.getCors();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(c.getAllowedOrigins());
+        // Origin patterns (e.g. https://*.trycloudflare.com) are credential-safe: Spring reflects the
+        // matched origin instead of '*'. Blank entries (from an empty env var) are ignored.
+        List<String> patterns = c.getAllowedOriginPatterns().stream()
+                .filter(p -> p != null && !p.isBlank()).toList();
+        if (!patterns.isEmpty()) {
+            config.setAllowedOriginPatterns(patterns);
+        }
         config.setAllowedMethods(c.getAllowedMethods());
         config.setAllowedHeaders(c.getAllowedHeaders());
         config.setExposedHeaders(c.getExposedHeaders());

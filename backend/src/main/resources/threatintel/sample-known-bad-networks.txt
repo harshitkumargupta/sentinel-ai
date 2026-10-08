@@ -1,0 +1,3 @@
+# name: Sample known-bad networks
+# SAMPLE OFFLINE FEED — uses RFC 5737 documentation ranges that the simulator labels as hostile.
+198.51.100.0/24

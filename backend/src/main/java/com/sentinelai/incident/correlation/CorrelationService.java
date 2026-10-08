@@ -12,11 +12,13 @@ import com.sentinelai.incident.domain.IncidentAlert;
 import com.sentinelai.incident.domain.IncidentEvent;
 import com.sentinelai.incident.domain.IncidentEventId;
 import com.sentinelai.incident.domain.IncidentFeedback;
+import com.sentinelai.incident.domain.IncidentPriority;
 import com.sentinelai.incident.domain.IncidentStatus;
 import com.sentinelai.incident.repository.IncidentAlertRepository;
 import com.sentinelai.incident.repository.IncidentEventRepository;
 import com.sentinelai.incident.repository.IncidentRepository;
 import com.sentinelai.notification.NotificationService;
+import com.sentinelai.notification.channel.IncidentNotificationEvent;
 import com.sentinelai.risk.RiskResult;
 import com.sentinelai.risk.RiskService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Default {@link Correlator}: groups alerts into incidents by entity (user/IP) within a time window,
@@ -113,6 +117,7 @@ public class CorrelationService implements Correlator {
                     .title(truncate(alert.getMessage()))
                     .status(IncidentStatus.OPEN)
                     .severity(alert.getSeverity())
+                    .priority(IncidentPriority.fromSeverity(alert.getSeverity()))
                     .feedback(IncidentFeedback.UNREVIEWED)
                     .correlationKey(key)
                     .riskScore(0)
@@ -135,6 +140,12 @@ public class CorrelationService implements Correlator {
             escalate(incident, notify);
         }
         events.publishEvent(new IncidentsChangedEvent(orgId));
+        if (created || escalated) {
+            Set<String> ruleTypes = incidentAlertRepository.findById_IncidentId(incident.getId()).stream()
+                    .map(ia -> ia.getAlert().getRuleType()).collect(Collectors.toSet());
+            events.publishEvent(new IncidentNotificationEvent(orgId, incident.getId(), incident.getTitle(),
+                    incident.getSeverity(), incident.getRiskScore() == null ? 0 : incident.getRiskScore(), created, ruleTypes));
+        }
         return new CorrelationOutcome(incident, created, escalated);
     }
 
@@ -188,6 +199,12 @@ public class CorrelationService implements Correlator {
     }
 
     private String deriveKey(SecurityEvent trigger, Alert alert) {
+        // IP-scoped detections (e.g. credential stuffing: one IP, many accounts) belong to the source
+        // IP, not to whichever account happened to trigger them.
+        String entity = alert.getEntityKey();
+        if (entity != null && (entity.startsWith("ip:") || entity.startsWith("SOURCE_IP:"))) {
+            return "ip:" + entity.substring(entity.indexOf(':') + 1);
+        }
         if (trigger != null) {
             if (trigger.getUsername() != null) {
                 return "user:" + trigger.getUsername();

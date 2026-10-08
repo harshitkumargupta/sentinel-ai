@@ -106,7 +106,8 @@ public class SiteService {
         return new SnippetResponse(curl, node, spring);
     }
 
-    private ApiKeyResponse issueKey(Site site) {
+    /** Issue a new ingest key: the raw value is returned once; only its SHA-256 is stored. */
+    public ApiKeyResponse issueKey(Site site) {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         String raw = "sk_" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -115,7 +116,7 @@ public class SiteService {
         return new ApiKeyResponse(key.getId(), site.getId(), raw, key.getScope());
     }
 
-    private Site requireAccessibleSite(AppUserPrincipal actor, Long siteId) {
+    public Site requireAccessibleSite(AppUserPrincipal actor, Long siteId) {
         Site site = siteRepository.findById(siteId)
                 .filter(s -> s.getOrg().getId().equals(actor.getOrgId()))
                 .orElseThrow(() -> new NotFoundException("Site not found: " + siteId));

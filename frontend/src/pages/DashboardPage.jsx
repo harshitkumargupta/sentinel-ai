@@ -1,6 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import NavBar from '../components/NavBar.jsx';
+import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
+import { useNavigate } from 'react-router-dom';
 import TuningCard from '../components/TuningCard.jsx';
+import PinnedSearchWidgets from '../components/PinnedSearchWidgets.jsx';
 import ThreatCoreLazy from '../components/three/ThreatCoreLazy.jsx';
 import AttackGlobeLazy from '../components/three/AttackGlobeLazy.jsx';
 import { Card, StatTile, Table, Badge, EmptyState, ErrorState, SkeletonLines } from '../components/ui/index.js';
@@ -28,7 +30,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [paused, setPaused] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
+  const [countryFilter, setCountryFilter] = useState(null);
   const seen = useRef(new Set());
+  const navigate = useNavigate();
+
+  // Clicking a source on the globe filters the live feed to that origin and lets the analyst jump
+  // straight to the related incidents.
+  const selectCountry = useCallback((cc) => {
+    setCountryFilter(cc);
+    setPaused(true); // freeze the feed so the filtered view doesn't shift under the analyst.
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -54,6 +65,8 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  // Reload immediately when a scenario/upload/action announces new data (unless paused).
+  useLiveRefresh(() => { if (!paused) load(); }, 0);
   useEffect(() => {
     if (paused) return undefined;
     const t = setInterval(load, REFRESH_MS);
@@ -68,6 +81,10 @@ export default function DashboardPage() {
     .filter((d) => d.value > 0).sort((a, b) => b.value - a.value).slice(0, 6), [data.summary]);
   const maxMitre = Math.max(1, ...data.mitre.map((m) => m.alertCount));
   const eventsPerMin = data.summary ? (data.summary.eventsLast24h / 1440) : 0;
+  const shownEvents = useMemo(
+    () => (countryFilter ? events.filter((e) => e.geoCountry === countryFilter) : events),
+    [events, countryFilter],
+  );
 
   const eventColumns = [
     { key: 'eventTimestamp', header: 'Time', sortable: true, width: 150,
@@ -80,9 +97,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <div className="dash-head">
           <div className="dash-head__title">
             <ThreatCoreLazy size={44} level={level} />
@@ -100,11 +115,13 @@ export default function DashboardPage() {
 
         {error && <ErrorState message={error} onRetry={load} />}
 
+        <PinnedSearchWidgets />
+
         {loading && !data.summary ? (
           <Card><SkeletonLines lines={4} /></Card>
         ) : (
           <>
-            <div className="kpi-row">
+            <div className="kpi-row stagger-in">
               <Card><StatTile label="Open incidents" value={Number(data.summary?.incidentsByStatus?.OPEN || 0)} /></Card>
               <Card><StatTile label="Events / min" value={Number(eventsPerMin.toFixed(1))} /></Card>
               <Card><StatTile label="Alert reduction" value={data.reduction?.reductionPct || 0} suffix="%" /></Card>
@@ -112,30 +129,38 @@ export default function DashboardPage() {
               <Card><StatTile label="Critical+High" value={Number((data.summary?.incidentsBySeverity?.CRITICAL || 0) + (data.summary?.incidentsBySeverity?.HIGH || 0))} /></Card>
             </div>
 
-            <div className="dash-grid">
+            <div className="dash-grid stagger-in">
               <Card title="Attack origins" subtitle="Live geo flows to protected sites" className="dash-grid__globe">
-                <AttackGlobeLazy flows={data.geo} height={320} />
+                <AttackGlobeLazy flows={data.geo} height={320} onSelectCountry={selectCountry} />
               </Card>
 
               <Suspense fallback={<><Card title="Events by severity"><SkeletonLines lines={3} /></Card><Card title="Top event types"><SkeletonLines lines={3} /></Card></>}>
                 <DashboardCharts sevData={sevData} typeData={typeData} />
               </Suspense>
 
-              <Card title="MITRE ATT&CK coverage" className="dash-grid__mitre">
-                {data.mitre.length === 0 ? <EmptyState title="No techniques yet" /> : (
-                  <div className="mitre-heat" role="img" aria-label="MITRE technique heatmap">
-                    {data.mitre.map((m) => {
-                      const t = m.alertCount / maxMitre;
-                      return (
-                        <div key={m.technique} className="mitre-cell"
-                          title={`${m.technique}: ${m.alertCount} alerts, ${m.ruleCount} rules`}
-                          style={{ background: m.alertCount === 0 ? 'var(--panel-2)' : `color-mix(in srgb, var(--danger) ${20 + t * 70}%, transparent)` }}>
-                          <span>{m.technique}</span>
-                          <strong>{m.alertCount}</strong>
-                        </div>
-                      );
-                    })}
-                  </div>
+              <Card title="MITRE ATT&CK coverage" subtitle={data.mitre.length ? `${data.mitre.length} technique${data.mitre.length === 1 ? '' : 's'}` : undefined}
+                className="dash-grid__mitre">
+                {data.mitre.length === 0 ? <EmptyState title="No techniques yet" message="Mapped techniques appear as detections fire." /> : (
+                  <>
+                    <div className="mitre-heat" role="img" aria-label="MITRE technique heatmap">
+                      {data.mitre.map((m) => {
+                        const t = m.alertCount / maxMitre;
+                        return (
+                          <div key={m.technique} className={`mitre-cell${m.alertCount === 0 ? ' mitre-cell--empty' : ''}`}
+                            title={`${m.technique}: ${m.alertCount} alerts, ${m.ruleCount} rules`}
+                            style={m.alertCount === 0 ? undefined : { background: `color-mix(in srgb, var(--danger) ${20 + t * 70}%, transparent)` }}>
+                            <span>{m.technique}</span>
+                            <strong>{m.alertCount}</strong>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mitre-scale">
+                      <span>fewer alerts</span>
+                      <span className="mitre-scale__ramp" aria-hidden="true" />
+                      <span>more</span>
+                    </div>
+                  </>
                 )}
               </Card>
 
@@ -158,14 +183,20 @@ export default function DashboardPage() {
 
             <Card title="Live event stream" subtitle={paused ? 'paused' : 'auto-refreshing'}
               style={{ marginTop: 'var(--sp-4)' }}>
-              <Table columns={eventColumns} rows={events} rowKey={(r) => r.id} newRowKeys={newIds}
-                maxHeight={320} emptyLabel="No recent events" />
+              {countryFilter && (
+                <div className="feed-filter">
+                  <span>Filtered to <strong>{countryFilter}</strong></span>
+                  <button className="ui-btn ui-btn--sm" onClick={() => navigate('/incidents')}>Open incidents →</button>
+                  <button className="ui-btn ui-btn--sm" onClick={() => { setCountryFilter(null); setPaused(false); }}>Clear ✕</button>
+                </div>
+              )}
+              <Table columns={eventColumns} rows={shownEvents} rowKey={(r) => r.id} newRowKeys={newIds}
+                maxHeight={320} emptyLabel={countryFilter ? `No recent events from ${countryFilter}` : 'No recent events'} />
             </Card>
 
             <div style={{ marginTop: 'var(--sp-4)' }}><TuningCard /></div>
           </>
         )}
-      </main>
-    </div>
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import PipelineStatusCard from '../components/PipelineStatusCard.jsx';
 import {
@@ -71,23 +70,18 @@ export default function PipelinePage() {
 
   if (disabled) {
     return (
-      <div className="app-shell">
-        <NavBar />
-        <main className="content">
-          <h2>Pipeline</h2>
-          <div className="state-box muted">
-            The Kafka pipeline is disabled on this backend. Start it with{' '}
-            <code>docker compose up -d</code> and <code>KAFKA_ENABLED=true</code>.
-          </div>
-        </main>
-      </div>
+      <>
+        <h2>Pipeline</h2>
+        <div className="state-box muted">
+          The Kafka pipeline is disabled on this backend. Start it with{' '}
+          <code>docker compose up -d</code> and <code>KAFKA_ENABLED=true</code>.
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <h2>Pipeline</h2>
         {notice && <p className="error-text">{notice}</p>}
 
@@ -153,7 +147,6 @@ export default function PipelinePage() {
             </table>
           </DataState>
         </section>
-      </main>
-    </div>
+    </>
   );
 }

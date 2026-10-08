@@ -1,5 +1,10 @@
 package com.sentinelai.common.bootstrap;
 
+import com.sentinelai.asset.Asset;
+import com.sentinelai.asset.AssetCriticality;
+import com.sentinelai.asset.AssetEnvironment;
+import com.sentinelai.asset.AssetRepository;
+import com.sentinelai.asset.AssetType;
 import com.sentinelai.auth.domain.Role;
 import com.sentinelai.auth.domain.User;
 import com.sentinelai.auth.repository.UserRepository;
@@ -29,15 +34,16 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 /**
- * Seeds dev-only data: one user per role, three detection rules (with MITRE technique IDs),
+ * Seeds dev/demo data: one user per role, the built-in detection rules (with MITRE technique IDs),
  * and two hashed honeytokens — all under the "Default Org" (id 1) created by migration V2.
  *
- * <p>Active only under the {@code dev} profile and idempotent, so it is safe on every startup
- * and never touches test or prod databases. Dev passwords are documented in the README.
+ * <p>Active only under the {@code dev} and {@code demo} profiles and idempotent per item (a user or
+ * rule is created only if its name is missing), so it is safe on every startup, fills in rules added
+ * by later releases, and never touches test or prod databases. Passwords are documented in the README.
  */
 @Slf4j
 @Component
-@Profile("dev")
+@Profile({"dev", "demo"})
 @RequiredArgsConstructor
 public class DevDataSeeder implements CommandLineRunner {
 
@@ -47,6 +53,7 @@ public class DevDataSeeder implements CommandLineRunner {
     private final HoneytokenRepository honeytokenRepository;
     private final UserSiteAccessRepository userSiteAccessRepository;
     private final AdminBaselineRepository adminBaselineRepository;
+    private final AssetRepository assetRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     private static final Long DEFAULT_SITE_ID = 1L;
@@ -62,6 +69,25 @@ public class DevDataSeeder implements CommandLineRunner {
         seedDetectionRules(org);
         seedHoneytokens(org);
         seedSiteAccessAndBaselines();
+        seedAssets(org);
+    }
+
+    /** Sample inventory (matches the bundled datasets' hosts/IPs) so asset criticality shows in risk. */
+    private void seedAssets(Organization org) {
+        if (assetRepository.count() > 0) {
+            return;
+        }
+        seedAsset(org, "web-01", "10.20.0.15", "Platform team", AssetType.SERVER, AssetEnvironment.PRODUCTION, AssetCriticality.HIGH);
+        seedAsset(org, "SRV-DB-02", "10.20.0.10", "Data team", AssetType.SERVER, AssetEnvironment.PRODUCTION, AssetCriticality.CRITICAL);
+        seedAsset(org, "SRV-APP-11", "10.20.0.5", "Platform team", AssetType.SERVER, AssetEnvironment.PRODUCTION, AssetCriticality.HIGH);
+        seedAsset(org, "WS-FIN-023", "10.20.3.23", "Finance", AssetType.WORKSTATION, AssetEnvironment.CORPORATE, AssetCriticality.MEDIUM);
+        log.info("Seeded 4 sample assets.");
+    }
+
+    private void seedAsset(Organization org, String host, String ip, String owner, AssetType type,
+                           AssetEnvironment env, AssetCriticality crit) {
+        assetRepository.save(Asset.builder().org(org).hostname(host).ip(ip).owner(owner).type(type)
+                .environment(env).criticality(crit).build());
     }
 
     private void seedSiteAccessAndBaselines() {
@@ -87,14 +113,21 @@ public class DevDataSeeder implements CommandLineRunner {
     }
 
     private void seedUsers(Organization org) {
-        if (userRepository.count() > 0) {
-            log.debug("Users already present — skipping user seed.");
-            return;
+        int created = 0;
+        created += seedUser(org, "admin", "admin@sentinel.ai", "Admin@123", Role.ADMIN);
+        created += seedUser(org, "analyst", "analyst@sentinel.ai", "Analyst@123", Role.ANALYST);
+        created += seedUser(org, "viewer", "viewer@sentinel.ai", "Viewer@123", Role.VIEWER);
+        if (created > 0) {
+            log.info("Seeded {} dev/demo user(s) (admin/analyst/viewer).", created);
         }
-        userRepository.save(buildUser(org, "admin", "admin@sentinel.ai", "Admin@123", Role.ADMIN));
-        userRepository.save(buildUser(org, "analyst", "analyst@sentinel.ai", "Analyst@123", Role.ANALYST));
-        userRepository.save(buildUser(org, "viewer", "viewer@sentinel.ai", "Viewer@123", Role.VIEWER));
-        log.info("Seeded 3 dev users (admin/analyst/viewer).");
+    }
+
+    private int seedUser(Organization org, String username, String email, String rawPassword, Role role) {
+        if (userRepository.findByUsername(username).isPresent()) {
+            return 0;
+        }
+        userRepository.save(buildUser(org, username, email, rawPassword, role));
+        return 1;
     }
 
     private User buildUser(Organization org, String username, String email, String rawPassword, Role role) {
@@ -109,11 +142,8 @@ public class DevDataSeeder implements CommandLineRunner {
     }
 
     private void seedDetectionRules(Organization org) {
-        if (detectionRuleRepository.count() > 0) {
-            log.debug("Detection rules already present — skipping rule seed.");
-            return;
-        }
         User admin = userRepository.findByUsername("admin").orElse(null);
+        int before = (int) detectionRuleRepository.count();
 
         seedRule(org, admin, "Brute force", "BRUTE_FORCE",
                 "{\"threshold\":10,\"windowSeconds\":300,\"groupBy\":\"username\"}",
@@ -131,12 +161,40 @@ public class DevDataSeeder implements CommandLineRunner {
                 "{}", Severity.HIGH, "T1548");
         seedRule(org, admin, "Honeytoken access", "HONEYTOKEN",
                 "{}", Severity.CRITICAL, "T1078.001");
+        seedRule(org, admin, "Port scan", "PORT_SCAN",
+                "{\"threshold\":20,\"windowSeconds\":120,\"groupBy\":\"sourceIp\"}", Severity.MEDIUM, "T1046");
+        seedRule(org, admin, "SQL injection", "SQL_INJECTION",
+                "{\"threshold\":3,\"windowSeconds\":300,\"groupBy\":\"sourceIp\"}", Severity.HIGH, "T1190");
+        seedRule(org, admin, "Malware on endpoint", "MALWARE",
+                "{\"threshold\":1,\"windowSeconds\":3600,\"groupBy\":\"entityKey\"}", Severity.CRITICAL, "T1204.002");
+        seedRule(org, admin, "Privilege escalation", "PRIVILEGE_ESCALATION",
+                "{\"threshold\":1,\"windowSeconds\":3600,\"groupBy\":\"username\"}", Severity.HIGH, "T1068");
+        seedRule(org, admin, "Data exfiltration", "DATA_EXFILTRATION",
+                "{\"minBytes\":524288000,\"threshold\":1,\"windowSeconds\":3600,\"groupBy\":\"username\"}",
+                Severity.CRITICAL, "T1048");
+        seedRule(org, admin, "Phishing link click", "PHISHING",
+                "{\"threshold\":1,\"windowSeconds\":3600,\"groupBy\":\"username\"}", Severity.HIGH, "T1566.002");
+        seedRule(org, admin, "Traffic flood (DDoS)", "DDOS",
+                "{\"threshold\":150,\"windowSeconds\":60,\"groupBy\":\"entityKey\"}", Severity.HIGH, "T1498");
 
-        log.info("Seeded 7 detection rules.");
+        seedRule(org, admin, "UBA: unusual login hour", "UBA_UNUSUAL_HOUR",
+                "{\"minSamples\":10,\"lookbackDays\":30,\"toleranceHours\":1,\"maxSharePercent\":5}", Severity.MEDIUM, "T1078");
+        seedRule(org, admin, "UBA: new login location", "UBA_NEW_LOCATION",
+                "{\"minSamples\":5,\"lookbackDays\":30,\"checkCountry\":1,\"checkSubnet\":1}", Severity.MEDIUM, "T1078");
+        seedRule(org, admin, "UBA: failed-login spike", "UBA_FAILED_SPIKE",
+                "{\"windowSeconds\":3600,\"lookbackDays\":14,\"minCount\":5,\"zThreshold\":3}", Severity.HIGH, "T1110");
+
+        int added = (int) detectionRuleRepository.count() - before;
+        if (added > 0) {
+            log.info("Seeded {} detection rule(s).", added);
+        }
     }
 
     private void seedRule(Organization org, User admin, String name, String ruleType,
                           String config, Severity severity, String mitre) {
+        if (detectionRuleRepository.existsByName(name)) {
+            return;
+        }
         detectionRuleRepository.save(DetectionRule.builder()
                 .org(org)
                 .name(name)

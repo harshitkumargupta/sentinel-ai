@@ -5,6 +5,7 @@ import com.sentinelai.common.web.ApiResponse;
 import com.sentinelai.detection.backtest.BacktestRequest;
 import com.sentinelai.detection.backtest.BacktestResult;
 import com.sentinelai.detection.backtest.BacktestService;
+import com.sentinelai.detection.sandbox.RuleSandboxService;
 import com.sentinelai.detection.dto.CreateRuleRequest;
 import com.sentinelai.detection.dto.EnabledRequest;
 import com.sentinelai.detection.dto.RuleResponse;
@@ -35,16 +36,32 @@ public class RuleController {
 
     private final RuleService ruleService;
     private final BacktestService backtestService;
+    private final RuleSandboxService sandbox;
 
     // Reading rules is allowed for any authenticated user (VIEWER+).
     @GetMapping
-    public ApiResponse<List<RuleResponse>> list() {
-        return ApiResponse.ok(ruleService.list());
+    public ApiResponse<List<RuleResponse>> list(@AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(ruleService.list(actor));
+    }
+
+    /** Rule types the engine can evaluate (one per registered evaluator). */
+    @GetMapping("/types")
+    public ApiResponse<java.util.Set<String>> types() {
+        return ApiResponse.ok(ruleService.ruleTypes());
+    }
+
+    /** What-if: replay events through the current vs. an edited (unsaved) config; creates nothing. */
+    @PostMapping("/{id}/sandbox")
+    @PreAuthorize("hasAnyRole('ANALYST','ADMIN')")
+    public ApiResponse<RuleSandboxService.Result> sandbox(@PathVariable Long id,
+                                                          @RequestBody RuleSandboxService.Request request,
+                                                          @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(sandbox.run(id, request, actor));
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<RuleResponse> get(@PathVariable Long id) {
-        return ApiResponse.ok(ruleService.get(id));
+    public ApiResponse<RuleResponse> get(@PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(ruleService.get(id, actor));
     }
 
     @PostMapping

@@ -63,14 +63,17 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?set a strong JWT_SECRET (>=32 chars) in .env}
       CORS_ALLOWED_ORIGINS: ${PUBLIC_URL:-http://localhost}
+      # Credential-safe wildcard so Cloudflare quick-tunnel URLs (new subdomain each restart) always
+      # pass CORS without re-deploying. Override/clear via CORS_ALLOWED_ORIGIN_PATTERNS.
+      CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-https://*.trycloudflare.com}
       # One-time bootstrap admin (only applied when the DB has no users yet).
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       REDIS_ENABLED: "true"
       REDIS_HOST: redis
       KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
-      AI_ENABLED: "${AI_ENABLED:-false}"
-      AI_PROVIDER: ${AI_PROVIDER:-fake}
+      AI_ENABLED: "${AI_ENABLED:-true}"
+      AI_PROVIDER: ${AI_PROVIDER:-local}
       LLM_API_KEY: ${LLM_API_KEY:-}
     depends_on:
       mysql:

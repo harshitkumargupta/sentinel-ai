@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import { listSites, createSite, rotateKey, revokeKey, getSnippet } from '../services/sites.service.js';
 import { messageFromError } from '../services/errors.js';
@@ -32,9 +31,7 @@ export default function SitesPage() {
   }
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <h2>Sites</h2>
         {error && <p className="error-text">{error}</p>}
 
@@ -81,7 +78,6 @@ export default function SitesPage() {
             </tbody>
           </table>
         </DataState>
-      </main>
-    </div>
+    </>
   );
 }

@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   listActions, dryRunAction, approveAction, rejectAction, executeAction, rollbackAction,
+  listActionTargets, proposeAction,
 } from '../services/playbook.service.js';
 import { messageFromError } from '../services/errors.js';
+import { emitDataChanged } from '../hooks/useLiveRefresh.js';
+
+/** One-click proposals: which action applies to which kind of evidence target. */
+const QUICK = [
+  { type: 'block_ip', label: 'Block IP', from: 'ips' },
+  { type: 'disable_user', label: 'Disable User', from: 'users' },
+  { type: 'force_password_reset', label: 'Force Password Reset', from: 'users' },
+  { type: 'isolate_host', label: 'Isolate Host', from: 'hosts' },
+];
 
 const STATUS_CLASS = {
   PROPOSED: 'badge-fallback', APPROVED: 'chip', EXECUTED: 'badge-valid',
@@ -15,6 +25,7 @@ export default function ActionsPanel({ incidentId, canAct }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);
+  const [targets, setTargets] = useState({ ips: [], users: [], hosts: [] });
 
   const load = useCallback(async () => {
     try {
@@ -27,12 +38,61 @@ export default function ActionsPanel({ incidentId, canAct }) {
   }, [incidentId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (canAct) listActionTargets(incidentId).then(setTargets).catch(() => {});
+  }, [incidentId, canAct]);
 
   async function run(id, fn) {
     setBusy(id);
     setError(null);
     try {
       await fn(id);
+      await load();
+      emitDataChanged('action');
+    } catch (e) {
+      setError(messageFromError(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** Approve; if the admin-risk guard asks for step-up, confirm with the user and retry once. */
+  async function approve(id) {
+    try {
+      await approveAction(id, false);
+    } catch (e) {
+      const msg = e?.response?.data?.error?.message || '';
+      if (e?.response?.status === 403 && msg.includes('Admin-risk guard')
+          && window.confirm(`${msg}\n\nConfirm this approval (step-up)?`)) {
+        await approveAction(id, true);
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  /** Execute; HIGH-impact actions (blast radius) need an explicit confirmation first. */
+  async function execute(id) {
+    const a = actions.find((x) => x.id === id);
+    const preview = a?.dryRun?.preview;
+    if (preview?.requiresConfirmation && !window.confirm(`HIGH impact: ${preview.reasons.join('; ')}.\n\nExecute anyway?`)) return;
+    try {
+      await executeAction(id, Boolean(preview?.requiresConfirmation));
+    } catch (e) {
+      const msg = e?.response?.data?.error?.message || '';
+      if (e?.response?.status === 409 && msg.startsWith('High-impact') && window.confirm(`${msg}.\n\nExecute anyway?`)) {
+        await executeAction(id, true);
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  async function propose(type, target) {
+    setBusy(`${type}:${target}`);
+    setError(null);
+    try {
+      await proposeAction(incidentId, type, target);
       await load();
     } catch (e) {
       setError(messageFromError(e));
@@ -43,11 +103,27 @@ export default function ActionsPanel({ incidentId, canAct }) {
 
   return (
     <section className="panel">
-      <h3>Response actions</h3>
+      <h3>Response actions <span className="chip">simulated — no real systems are changed</span></h3>
       {error && <p className="error-text">{error}</p>}
+
+      {canAct && (
+        <div className="quick-actions">
+          {QUICK.map((q) => (targets[q.from] || []).map((t) => (
+            <button key={`${q.type}:${t}`} className="ghost" disabled={busy !== null}
+              onClick={() => propose(q.type, t)}>
+              {q.label}: <code>{t}</code>
+            </button>
+          )))}
+          {targets.ips.length + targets.users.length + targets.hosts.length === 0 && (
+            <p className="muted small">No IPs, users or hosts in this incident's evidence to act on.</p>
+          )}
+          <p className="muted small">Proposing adds the action below; then Dry-run → Approve → Execute (and Rollback).</p>
+        </div>
+      )}
+
       {loading && <div className="state-box">Loading…</div>}
       {!loading && actions.length === 0 && (
-        <p className="muted">No actions yet. Approve an AI analysis to propose response actions.</p>
+        <p className="muted">No actions yet. Propose one above, or approve an AI analysis.</p>
       )}
 
       {actions.map((a) => (
@@ -67,6 +143,17 @@ export default function ActionsPanel({ incidentId, canAct }) {
                 : `refused — ${a.dryRun.reason}`}
             </p>
           )}
+          {a.dryRun?.preview && (
+            <div className="small" style={{ margin: '0.25rem 0' }}>
+              <span className={`ai-badge ${a.dryRun.preview.impact === 'HIGH' ? 'badge-rejected' : a.dryRun.preview.impact === 'MEDIUM' ? 'badge-fallback' : 'badge-valid'}`}>
+                Impact {a.dryRun.preview.impact}</span>{' '}
+              {a.dryRun.preview.users.length} user(s){a.dryRun.preview.admins > 0 && <strong> incl. {a.dryRun.preview.admins} admin</strong>}
+              {' · '}{a.dryRun.preview.activeSessions} active session(s)
+              {a.dryRun.preview.hosts.length > 0 && <> · hosts {a.dryRun.preview.hosts.join(', ')}</>}
+              {a.dryRun.preview.assets.length > 0 && <> · assets {a.dryRun.preview.assets.map((x) => `${x.asset} (${x.criticality})`).join(', ')}</>}
+              <div className="muted">{a.dryRun.preview.reasons.join('; ')}{a.dryRun.preview.requiresConfirmation && ' — execution will ask for confirmation'}</div>
+            </div>
+          )}
           {a.status === 'FAILED' && a.failureReason && (
             <p className="error-text small">Failed: {a.failureReason}</p>
           )}
@@ -76,14 +163,14 @@ export default function ActionsPanel({ incidentId, canAct }) {
               {a.status === 'PROPOSED' && (
                 <>
                   <button className="ghost" disabled={busy === a.id} onClick={() => run(a.id, dryRunAction)}>Dry-run</button>
-                  <button disabled={busy === a.id} onClick={() => run(a.id, approveAction)}>Approve</button>
+                  <button disabled={busy === a.id} onClick={() => run(a.id, approve)}>Approve</button>
                   <button className="ghost" disabled={busy === a.id} onClick={() => run(a.id, rejectAction)}>Reject</button>
                 </>
               )}
               {a.status === 'APPROVED' && (
                 <>
                   <button className="ghost" disabled={busy === a.id} onClick={() => run(a.id, dryRunAction)}>Dry-run</button>
-                  <button disabled={busy === a.id} onClick={() => run(a.id, executeAction)}>Execute</button>
+                  <button disabled={busy === a.id} onClick={() => run(a.id, execute)}>Execute</button>
                 </>
               )}
               {a.status === 'EXECUTED' && (

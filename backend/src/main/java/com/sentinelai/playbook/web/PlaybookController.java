@@ -3,15 +3,18 @@ package com.sentinelai.playbook.web;
 import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.web.ApiResponse;
 import com.sentinelai.common.web.RequestUtils;
+import com.sentinelai.playbook.PlaybookProposalService;
 import com.sentinelai.playbook.PlaybookService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,11 +31,26 @@ import java.util.List;
 public class PlaybookController {
 
     private final PlaybookService playbookService;
+    private final PlaybookProposalService proposalService;
 
     @GetMapping("/api/incidents/{id}/actions")
     public ApiResponse<List<PlaybookActionResponse>> list(@PathVariable Long id,
                                                           @AuthenticationPrincipal AppUserPrincipal actor) {
         return ApiResponse.ok(playbookService.listForIncident(id, actor));
+    }
+
+    @GetMapping("/api/incidents/{id}/action-targets")
+    public ApiResponse<PlaybookProposalService.ActionTargets> targets(@PathVariable Long id,
+                                                                     @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(proposalService.targets(id, actor));
+    }
+
+    @PostMapping("/api/incidents/{id}/actions")
+    @PreAuthorize("hasAnyRole('ANALYST','ADMIN')")
+    public ApiResponse<PlaybookActionResponse> propose(@PathVariable Long id,
+                                                       @Valid @RequestBody ProposeActionRequest request,
+                                                       @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(proposalService.propose(id, request, actor));
     }
 
     @PostMapping("/api/actions/{id}/dry-run")
@@ -61,8 +79,9 @@ public class PlaybookController {
     @PostMapping("/api/actions/{id}/execute")
     @PreAuthorize("hasAnyRole('ANALYST','ADMIN')")
     public ApiResponse<PlaybookActionResponse> execute(@PathVariable Long id,
+                                                       @RequestParam(defaultValue = "false") boolean confirm,
                                                        @AuthenticationPrincipal AppUserPrincipal actor) {
-        return ApiResponse.ok(playbookService.execute(id, actor));
+        return ApiResponse.ok(playbookService.execute(id, actor, confirm));
     }
 
     @PostMapping("/api/actions/{id}/rollback")

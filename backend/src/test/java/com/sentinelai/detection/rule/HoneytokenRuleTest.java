@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -29,8 +31,8 @@ class HoneytokenRuleTest {
         HoneytokenRepository repo = mock(HoneytokenRepository.class);
         Honeytoken token = Honeytoken.builder().id(7L).org(RuleTestFixtures.ORG)
                 .type("AWS_KEY").valueHash(Hashing.sha256Hex("secret")).triggeredCount(0).build();
-        lenient().when(repo.findByValueHash(anyString())).thenReturn(Optional.empty());
-        when(repo.findByValueHash(Hashing.sha256Hex("secret"))).thenReturn(Optional.of(token));
+        lenient().when(repo.findFirstByOrg_IdAndValueHash(anyLong(), anyString())).thenReturn(Optional.empty());
+        when(repo.findFirstByOrg_IdAndValueHash(anyLong(), eq(Hashing.sha256Hex("secret")))).thenReturn(Optional.of(token));
 
         HoneytokenRule rule = new HoneytokenRule(repo, mapper);
         var def = RuleTestFixtures.rule("HONEYTOKEN", "{}", Severity.HIGH, "T1078.001");
@@ -47,7 +49,7 @@ class HoneytokenRuleTest {
     @Test
     void doesNotFireWhenNoHoneytokenMatches() {
         HoneytokenRepository repo = mock(HoneytokenRepository.class);
-        when(repo.findByValueHash(anyString())).thenReturn(Optional.empty());
+        when(repo.findFirstByOrg_IdAndValueHash(anyLong(), anyString())).thenReturn(Optional.empty());
 
         HoneytokenRule rule = new HoneytokenRule(repo, mapper);
         var def = RuleTestFixtures.rule("HONEYTOKEN", "{}", Severity.HIGH, "T1078.001");

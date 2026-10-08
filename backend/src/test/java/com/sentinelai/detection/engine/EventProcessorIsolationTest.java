@@ -72,7 +72,10 @@ class EventProcessorIsolationTest {
         SynchronousEventProcessor processor = new SynchronousEventProcessor(
                 List.of(boom, good), ruleRepo, mock(com.sentinelai.event.repository.SecurityEventRepository.class),
                 alertRepo, orgRepo, ctx, new DetectionProperties(), meters, new ObjectMapper(),
-                mock(com.sentinelai.incident.correlation.Correlator.class));
+                mock(com.sentinelai.incident.correlation.Correlator.class),
+                new com.sentinelai.detection.buildingblock.BuildingBlockMatcher(
+                        mock(com.sentinelai.detection.buildingblock.BuildingBlockRepository.class), new ObjectMapper(),
+                        mock(org.springframework.beans.factory.ObjectProvider.class)));
 
         SecurityEvent event = SecurityEvent.builder().id(100L).org(ORG).eventType(EventType.FAILED_LOGIN)
                 .severity(Severity.LOW).honeytoken(false).eventTimestamp(Instant.now()).build();

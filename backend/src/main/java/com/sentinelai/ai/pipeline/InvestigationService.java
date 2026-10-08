@@ -228,6 +228,9 @@ public class InvestigationService {
     }
 
     private double cost(LlmResponse r) {
+        if (com.sentinelai.ai.local.LocalAnalysisEngine.MODEL_NAME.equals(r.modelName())) {
+            return 0.0; // the offline engine is free
+        }
         AiProperties.Budget b = props.getBudget();
         return r.promptTokens() / 1000.0 * b.getCostPer1kPromptUsd()
                 + r.completionTokens() / 1000.0 * b.getCostPer1kCompletionUsd();

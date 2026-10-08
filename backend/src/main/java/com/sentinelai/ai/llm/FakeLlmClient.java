@@ -139,7 +139,7 @@ public class FakeLlmClient implements LlmClient {
                 .toString();
     }
 
-    private IncidentContext extractContext(String userPrompt) {
+    IncidentContext extractContext(String userPrompt) {
         int start = userPrompt.indexOf(PromptSanitizer.DATA_OPEN);
         int end = userPrompt.indexOf(PromptSanitizer.DATA_CLOSE);
         if (start < 0 || end < 0 || end <= start) {

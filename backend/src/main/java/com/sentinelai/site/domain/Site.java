@@ -45,12 +45,26 @@ public class Site {
     @Column(length = 255)
     private String domain;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_type", nullable = false,
+            columnDefinition = "enum('GENERIC','WEB_SERVER','AUTH','FIREWALL','APPLICATION')")
+    private LogSourceType sourceType = LogSourceType.GENERIC;
+
+    @Column(length = 500)
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "enum('ACTIVE','DISABLED')")
     private SiteStatus status;
 
     @Column(name = "last_event_at")
     private Instant lastEventAt;
+
+    /** Records from this source that could not be parsed/accepted (Log Sources page). */
+    @Builder.Default
+    @Column(name = "parse_error_count", nullable = false)
+    private long parseErrorCount = 0;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

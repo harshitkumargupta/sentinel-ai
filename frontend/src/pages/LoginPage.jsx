@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import LoginBackdropLazy from '../components/three/LoginBackdropLazy.jsx';
+import { getDemoInfo } from '../services/demo.service.js';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -10,6 +11,25 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [quick, setQuick] = useState([]);
+
+  // Demo profile only: the server lists its public demo accounts for one-click sign-in.
+  useEffect(() => {
+    getDemoInfo().then((i) => setQuick(i.quickLogins || [])).catch(() => setQuick([]));
+  }, []);
+
+  async function quickLogin(account) {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await login(account.username, account.password);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || 'Login failed.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -60,7 +80,20 @@ export default function LoginPage() {
         <button type="submit" disabled={submitting}>
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="hint">Dev users: admin / analyst / viewer (see README for passwords).</p>
+        {quick.length > 0 ? (
+          <div className="quick-login">
+            <p className="hint">Demo mode — sign in as:</p>
+            <div className="filters">
+              {quick.map((a) => (
+                <button key={a.username} type="button" className="ghost" disabled={submitting} onClick={() => quickLogin(a)}>
+                  Login as {a.role.charAt(0) + a.role.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="hint">Sign in with your SentinelAI account.</p>
+        )}
       </form>
     </div>
   );

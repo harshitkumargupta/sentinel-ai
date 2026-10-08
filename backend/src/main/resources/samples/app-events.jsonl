@@ -1,0 +1,22 @@
+{"time": "2026-10-01T09:02:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "alice", "sourceIp": "10.20.1.52", "resource": "/api/reports"}
+{"time": "2026-10-01T09:04:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "alice", "sourceIp": "10.20.1.59", "resource": "/api/orders"}
+{"time": "2026-10-01T09:06:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "carol", "sourceIp": "10.20.1.51", "resource": "/api/profile"}
+{"time": "2026-10-01T09:08:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.19", "resource": "/api/reports"}
+{"time": "2026-10-01T09:10:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "alice", "sourceIp": "10.20.1.39", "resource": "/api/orders"}
+{"time": "2026-10-01T09:12:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "carol", "sourceIp": "10.20.1.16", "resource": "/api/reports"}
+{"time": "2026-10-01T09:14:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.20", "resource": "/api/profile"}
+{"time": "2026-10-01T09:16:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "alice", "sourceIp": "10.20.1.20", "resource": "/api/profile"}
+{"time": "2026-10-01T09:18:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.42", "resource": "/api/reports"}
+{"time": "2026-10-01T09:20:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.36", "resource": "/api/orders"}
+{"time": "2026-10-01T09:22:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.30", "resource": "/api/orders"}
+{"time": "2026-10-01T09:24:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "carol", "sourceIp": "10.20.1.33", "resource": "/api/orders"}
+{"time": "2026-10-01T09:26:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.45", "resource": "/api/reports"}
+{"time": "2026-10-01T09:28:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.55", "resource": "/api/orders"}
+{"time": "2026-10-01T09:30:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.31", "resource": "/api/profile"}
+{"time": "2026-10-01T09:32:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "carol", "sourceIp": "10.20.1.28", "resource": "/api/profile"}
+{"time": "2026-10-01T09:34:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "alice", "sourceIp": "10.20.1.17", "resource": "/api/orders"}
+{"time": "2026-10-01T09:36:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "alice", "sourceIp": "10.20.1.15", "resource": "/api/reports"}
+{"time": "2026-10-01T09:38:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.12", "resource": "/api/orders"}
+{"time": "2026-10-01T09:40:00Z", "eventType": "OTHER", "severity": "LOW", "outcome": "SUCCESS", "username": "bob", "sourceIp": "10.20.1.58", "resource": "/api/orders"}
+{"time": "2026-10-01T09:41:00Z", "eventType": "ABNORMAL_ACCESS", "severity": "HIGH", "outcome": "FAILURE", "username": "viewer_dan", "sourceIp": "10.20.3.77", "resource": "/api/admin/users", "geoCountry": "US"}
+{"not": "closed"

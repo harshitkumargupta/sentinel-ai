@@ -45,18 +45,28 @@ public class SecurityEvent {
     @JoinColumn(name = "site_id")
     private com.sentinelai.site.domain.Site site;
 
+    /** The inventoried asset this event concerns (set at ingest by AssetResolver). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "asset_id")
+    private com.sentinelai.asset.Asset asset;
+
     // Optional client-supplied id for idempotent ingestion (unique per org when present).
     @Column(name = "client_event_id", length = 100)
     private String clientEventId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false,
-            columnDefinition = "enum('FAILED_LOGIN','BRUTE_FORCE','SUSPICIOUS_LOGIN','API_ABUSE','ABNORMAL_ACCESS','HONEYTOKEN_ACCESS','OTHER','PROMPT_INJECTION')")
+            columnDefinition = "enum('FAILED_LOGIN','BRUTE_FORCE','SUSPICIOUS_LOGIN','API_ABUSE','ABNORMAL_ACCESS','HONEYTOKEN_ACCESS','OTHER','PROMPT_INJECTION','LOGIN_SUCCESS','PORT_SCAN','SQL_INJECTION','MALWARE_DETECTED','PRIVILEGE_ESCALATION','DATA_TRANSFER','PHISHING_CLICK','NETWORK_FLOOD')")
     private EventType eventType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "enum('LOW','MEDIUM','HIGH','CRITICAL')")
     private Severity severity;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "enum('SUCCESS','FAILURE','UNKNOWN')")
+    private EventOutcome outcome = EventOutcome.UNKNOWN;
 
     @Column(name = "source_ip", length = 45)
     private String sourceIp;

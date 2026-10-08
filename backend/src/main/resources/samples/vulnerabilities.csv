@@ -1,0 +1,6 @@
+host,cve_id,severity,description
+web-01,CVE-2021-41773,CRITICAL,Apache HTTP Server path traversal (sample finding)
+web-01,CVE-2023-44487,HIGH,HTTP/2 rapid reset denial of service (sample finding)
+SRV-DB-02,CVE-2022-21500,MEDIUM,Database privilege issue (sample finding)
+10.20.3.23,CVE-2023-36884,HIGH,Office/Windows HTML remote code execution (sample finding)
+unknown-host,CVE-2020-0001,LOW,Not in the inventory - reported as unmatched

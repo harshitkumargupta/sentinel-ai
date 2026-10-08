@@ -1,0 +1,15 @@
+{
+  "T1046":     { "name": "Network Service Discovery",                 "tactic": "Discovery" },
+  "T1048":     { "name": "Exfiltration Over Alternative Protocol",    "tactic": "Exfiltration" },
+  "T1068":     { "name": "Exploitation for Privilege Escalation",     "tactic": "Privilege Escalation" },
+  "T1078":     { "name": "Valid Accounts",                            "tactic": "Initial Access / Persistence" },
+  "T1078.001": { "name": "Valid Accounts: Default Accounts",          "tactic": "Initial Access / Persistence" },
+  "T1110":     { "name": "Brute Force",                               "tactic": "Credential Access" },
+  "T1110.004": { "name": "Brute Force: Credential Stuffing",          "tactic": "Credential Access" },
+  "T1190":     { "name": "Exploit Public-Facing Application",         "tactic": "Initial Access" },
+  "T1204.002": { "name": "User Execution: Malicious File",            "tactic": "Execution" },
+  "T1498":     { "name": "Network Denial of Service",                 "tactic": "Impact" },
+  "T1499":     { "name": "Endpoint Denial of Service",                "tactic": "Impact" },
+  "T1548":     { "name": "Abuse Elevation Control Mechanism",         "tactic": "Privilege Escalation" },
+  "T1566.002": { "name": "Phishing: Spearphishing Link",              "tactic": "Initial Access" }
+}

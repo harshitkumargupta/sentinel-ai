@@ -23,12 +23,22 @@ export async function rejectAction(id) {
   return data.data;
 }
 
-export async function executeAction(id) {
-  const { data } = await api.post(`/actions/${id}/execute`);
+export async function executeAction(id, confirm = false) {
+  const { data } = await api.post(`/actions/${id}/execute`, null, { params: { confirm } });
   return data.data;
 }
 
 export async function rollbackAction(id) {
   const { data } = await api.post(`/actions/${id}/rollback`);
+  return data.data;
+}
+
+export async function listActionTargets(incidentId) {
+  const { data } = await api.get(`/incidents/${incidentId}/action-targets`);
+  return data.data; // { ips, users, hosts }
+}
+
+export async function proposeAction(incidentId, actionType, target, reason) {
+  const { data } = await api.post(`/incidents/${incidentId}/actions`, { actionType, target, reason });
   return data.data;
 }

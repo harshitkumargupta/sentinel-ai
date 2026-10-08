@@ -54,7 +54,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (path.equals("/api/auth/login")) {
             bucket = props.getLogin();
             key = "login:ip:" + ip;
-        } else if (path.startsWith("/api/events/ingest")) {
+        } else if (path.startsWith("/api/events/ingest") || path.startsWith("/api/ingest/")) {
             bucket = props.getIngest();
             String apiKey = request.getHeader("X-API-Key");
             key = apiKey != null ? "ingest:key:" + Hashing.sha256Hex(apiKey) : "ingest:ip:" + ip;

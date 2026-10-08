@@ -3,7 +3,7 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 # Resolve dependencies first (pom changes rarely relative to source) so the layer caches well.
-COPY pom.xml .
+COPY pom.xml lombok.config ./
 RUN mvn -B -ntp dependency:go-offline
 COPY src ./src
 RUN mvn -B -ntp clean package -DskipTests

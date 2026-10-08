@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * AI investigation configuration. Disabled by default — with {@code sentinel.ai.enabled=false} every
+ * AI investigation configuration. Enabled by default with the offline {@code local} provider; with {@code sentinel.ai.enabled=false} every
  * AI feature degrades to a deterministic fallback and no LLM is ever contacted. The API key is read
  * only from the {@code LLM_API_KEY} environment variable (never a property, never logged).
  */
@@ -18,15 +18,23 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "sentinel.ai")
 public class AiProperties {
 
-    /** Master feature flag for all AI features. */
-    private boolean enabled = false;
+    /** Master feature flag for all AI features (safe to default on: the default provider is offline). */
+    private boolean enabled = true;
 
-    /** {@code fake} (deterministic, for tests/dev) or {@code http} (OpenAI-compatible endpoint). */
+    /**
+     * {@code local} (default: offline rule/template engine, no key), {@code fake} (test stub) or
+     * {@code http} (OpenAI-compatible endpoint; key from {@code LLM_API_KEY}).
+     */
     @NotBlank
-    private String provider = "fake";
+    private String provider = "local";
 
     @NotBlank
-    private String model = "fake-model";
+    private String model = "sentinel-local-v1";
+
+    /** True when no external model is contacted (local or fake provider). */
+    public boolean isOffline() {
+        return !"http".equalsIgnoreCase(provider);
+    }
 
     /** OpenAI-compatible base URL (chat completions at {baseUrl}/chat/completions). */
     @NotBlank

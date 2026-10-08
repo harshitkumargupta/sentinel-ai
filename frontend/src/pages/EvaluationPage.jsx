@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import { getEvaluation } from '../services/evaluation.service.js';
 import { messageFromError } from '../services/errors.js';
@@ -30,9 +29,7 @@ export default function EvaluationPage() {
   }
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <h2>Detection evaluation</h2>
         <div className="filters">
           <input placeholder="run id" value={runId} onChange={(e) => setRunId(e.target.value)} style={{ minWidth: 280 }} />
@@ -62,7 +59,6 @@ export default function EvaluationPage() {
             </>
           )}
         </DataState>
-      </main>
-    </div>
+    </>
   );
 }

@@ -3,6 +3,8 @@ package com.sentinelai.honeytoken.domain;
 import com.sentinelai.common.domain.Organization;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -51,6 +53,19 @@ public class Honeytoken {
 
     @Column(length = 255)
     private String description;
+
+    /** What the decoy is (drives where tripwires look for it). */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "enum('USERNAME','API_KEY','URL_PATH','OTHER')")
+    private HoneytokenKind kind = HoneytokenKind.OTHER;
+
+    /** Shown in the UI: full for usernames/paths, masked for API keys. */
+    @Column(name = "display_value", length = 120)
+    private String displayValue;
+
+    @Column(name = "last_triggered_at")
+    private Instant lastTriggeredAt;
 
     @Column(name = "triggered_count", nullable = false)
     private Integer triggeredCount;

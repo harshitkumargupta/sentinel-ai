@@ -24,3 +24,42 @@ export async function getTuningSuggestions() {
   const { data } = await api.get('/rules/tuning-suggestions');
   return data.data;
 }
+
+export async function listRuleTypes() {
+  const { data } = await api.get('/rules/types');
+  return data.data;
+}
+
+export async function listBuildingBlocks() {
+  const { data } = await api.get('/building-blocks');
+  return data.data;
+}
+
+export async function getBuildingBlockVocabulary() {
+  const { data } = await api.get('/building-blocks/vocabulary');
+  return data.data; // { fields, operators }
+}
+
+export async function createBuildingBlock(body) {
+  const { data } = await api.post('/building-blocks', body);
+  return data.data;
+}
+
+export async function updateBuildingBlock(id, body) {
+  const { data } = await api.put(`/building-blocks/${id}`, body);
+  return data.data;
+}
+
+export async function deleteBuildingBlock(id) {
+  await api.delete(`/building-blocks/${id}`);
+}
+
+export async function sandboxRule(id, body) {
+  const { data } = await api.post(`/rules/${id}/sandbox`, body);
+  return data.data;
+}
+
+export async function createRule(body) {
+  const { data } = await api.post('/rules', body);
+  return data.data;
+}

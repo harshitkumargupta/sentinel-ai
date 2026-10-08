@@ -9,5 +9,7 @@ public enum IncidentStatus {
     INVESTIGATING,
     CONTAINED,
     RESOLVED,
-    FALSE_POSITIVE
+    FALSE_POSITIVE,
+    /** Terminal: the case is closed after resolution or a false-positive verdict. */
+    CLOSED
 }

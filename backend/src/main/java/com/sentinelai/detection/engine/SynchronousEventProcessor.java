@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.alert.domain.Alert;
 import com.sentinelai.alert.repository.AlertRepository;
 import com.sentinelai.common.repository.OrganizationRepository;
+import com.sentinelai.detection.buildingblock.BuildingBlockMatcher;
 import com.sentinelai.detection.config.DetectionProperties;
 import com.sentinelai.detection.domain.DetectionRule;
 import com.sentinelai.detection.repository.DetectionRuleRepository;
@@ -42,6 +43,7 @@ public class SynchronousEventProcessor implements EventProcessor {
     private final MeterRegistry meterRegistry;
     private final ObjectMapper objectMapper;
     private final Correlator correlator;
+    private final BuildingBlockMatcher buildingBlocks;
 
     public SynchronousEventProcessor(List<DetectionRuleEvaluator> ruleBeans,
                                      DetectionRuleRepository ruleRepository,
@@ -52,7 +54,8 @@ public class SynchronousEventProcessor implements EventProcessor {
                                      DetectionProperties properties,
                                      MeterRegistry meterRegistry,
                                      ObjectMapper objectMapper,
-                                     Correlator correlator) {
+                                     Correlator correlator,
+                                     BuildingBlockMatcher buildingBlocks) {
         this.rules = ruleBeans.stream()
                 .collect(Collectors.toMap(DetectionRuleEvaluator::type, Function.identity()));
         this.ruleRepository = ruleRepository;
@@ -64,6 +67,7 @@ public class SynchronousEventProcessor implements EventProcessor {
         this.meterRegistry = meterRegistry;
         this.objectMapper = objectMapper;
         this.correlator = correlator;
+        this.buildingBlocks = buildingBlocks;
         log.info("Detection engine initialized with rules: {}", this.rules.keySet());
     }
 
@@ -102,6 +106,9 @@ public class SynchronousEventProcessor implements EventProcessor {
                 continue;
             }
             try {
+                if (!buildingBlocks.matches(event, rule)) {
+                    continue; // the event falls outside the rule's building blocks
+                }
                 evaluator.evaluate(event, rule, ruleContext)
                         .ifPresent(draft -> saved.add(persistAlert(event, rule, draft, runId)));
             } catch (Exception ex) {

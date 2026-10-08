@@ -6,35 +6,46 @@
  */
 :root,
 :root[data-theme="dark"] {
-  /* Surfaces */
-  --bg: #0b0f14;
-  --bg-elev: #0f141b;
-  --panel: #171d26;
-  --panel-2: #212a35;
-  --border: #3a4552;
-  --border-strong: #4d5b6b;
+  /* Surfaces — deep navy base with layered elevations. */
+  --bg: #080b12;
+  --bg-elev: #0c111a;
+  --panel: #121926;
+  --panel-2: #1b2535;
+  --border: #2b3850;
+  --border-strong: #3e4f6b;
 
   /* Text — higher contrast so muted text/labels are clearly readable (WCAG AA). */
-  --text: #f0f4f8;
-  --muted: #b9c4d0;
-  --text-inverse: #0b0f14;
+  --text: #eef3fa;
+  --muted: #9fb0c6;
+  --text-inverse: #080b12;
 
-  /* Brand / accent */
-  --accent: #4d9bf0;
-  --accent-strong: #2f81f7;
+  /* Brand / accent — electric blue → cyan. */
+  --accent: #4db5f5;
+  --accent-strong: #2f8ef7;
   --accent-contrast: #ffffff;
+  --accent-2: #22d3ee;
+  --gradient-primary: linear-gradient(135deg, #2f8ef7 0%, #22d3ee 100%);
+  --gradient-primary-soft: linear-gradient(135deg, rgba(47,142,247,0.18) 0%, rgba(34,211,238,0.18) 100%);
+  --glow-primary: 0 0 0 1px rgba(77,181,245,0.25), 0 8px 24px -8px rgba(47,142,247,0.55);
 
   /* Status */
-  --success: #2ea043;
-  --warning: #d29922;
-  --danger: #f85149;
+  --success: #2fbf61;
+  --warning: #f0b429;
+  --danger: #ff5a5f;
   --info: #58a6ff;
 
-  /* Severity palette — distinct, high-visibility hues (cyan→amber→orange→red). */
-  --sev-low: #38bdf8;        --sev-low-fg: #d6f1ff;
+  /* Severity palette — LOW green, MEDIUM amber, HIGH orange, CRITICAL red (with soft glow). */
+  --sev-low: #3ddc97;        --sev-low-fg: #d6ffe9;
   --sev-medium: #f0b429;     --sev-medium-fg: #fff2cc;
   --sev-high: #ff8c42;       --sev-high-fg: #ffe4d1;
   --sev-critical: #ff5a5f;   --sev-critical-fg: #ffd9db;
+  --sev-critical-glow: 0 0 12px -2px rgba(255,90,95,0.7);
+
+  /* Glass surfaces (blurred translucent cards with a 1px gradient border). */
+  --glass-bg: linear-gradient(180deg, rgba(27,37,53,0.72) 0%, rgba(18,25,38,0.72) 100%);
+  --glass-border: linear-gradient(135deg, rgba(120,150,190,0.35), rgba(120,150,190,0.06));
+  --glass-blur: 14px;
+  --hairline: rgba(255,255,255,0.06);
 
   /* Chart categorical palette (color-blind-aware, distinct hues) */
   --chart-1: #38bdf8;
@@ -50,9 +61,9 @@
   /* Radius */
   --radius-sm: 6px; --radius: 10px; --radius-lg: 14px; --radius-pill: 999px;
 
-  /* Typography */
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  /* Typography — Inter for UI, JetBrains Mono for data (self-hosted). */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
   --fs-xs: 0.75rem; --fs-sm: 0.85rem; --fs-md: 0.95rem; --fs-lg: 1.15rem; --fs-xl: 1.5rem; --fs-2xl: 2rem;
 
   /* Elevation */
@@ -82,11 +93,20 @@
   --accent: #0969da;
   --accent-strong: #0860ca;
   --accent-contrast: #ffffff;
+  --accent-2: #0891b2;
+  --gradient-primary: linear-gradient(135deg, #0969da 0%, #0891b2 100%);
+  --gradient-primary-soft: linear-gradient(135deg, rgba(9,105,218,0.12) 0%, rgba(8,145,178,0.12) 100%);
+  --glow-primary: 0 0 0 1px rgba(9,105,218,0.2), 0 8px 24px -8px rgba(9,105,218,0.4);
 
   --success: #1a7f37;
   --warning: #9a6700;
   --danger: #cf222e;
   --info: #0969da;
+
+  --glass-bg: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(246,248,250,0.85) 100%);
+  --glass-border: linear-gradient(135deg, rgba(31,35,40,0.14), rgba(31,35,40,0.03));
+  --hairline: rgba(31,35,40,0.06);
+  --sev-critical-glow: 0 0 12px -3px rgba(207,34,46,0.5);
 
   --sev-low: #0969da;        --sev-low-fg: #0a3977;
   --sev-medium: #9a6700;     --sev-medium-fg: #4d3300;
@@ -108,7 +128,12 @@
   }
 }
 
-/* Users who prefer reduced motion get no transitions/animations anywhere. */
+/* Apply the chosen font pair app-wide; data uses the mono face. */
+body { font-family: var(--font-sans); }
+code, kbd, pre, samp, .mono, [data-mono] { font-family: var(--font-mono); }
+
+/* Users who prefer reduced motion — or who choose Motion = Off — get no transitions/animations.
+ * Motion = Reduced (data-motion="reduced") keeps opacity fades but cancels movement/scale. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -116,6 +141,12 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+:root[data-motion="off"] *, :root[data-motion="off"] *::before, :root[data-motion="off"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* Visible focus ring for keyboard users. */

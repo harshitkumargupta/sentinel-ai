@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import RiskBandBadge from '../components/RiskBandBadge.jsx';
 import {
@@ -41,9 +40,7 @@ export default function AdminRiskPage() {
   }
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <h2>Admin risk</h2>
         {error && <p className="error-text">{error}</p>}
 
@@ -115,7 +112,6 @@ export default function AdminRiskPage() {
             </table>
           </section>
         </DataState>
-      </main>
-    </div>
+    </>
   );
 }

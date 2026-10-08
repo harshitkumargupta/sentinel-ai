@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import NavBar from '../components/NavBar.jsx';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
@@ -9,25 +8,27 @@ import StorylineGraph from '../components/StorylineGraph.jsx';
 import Storyline3DLazy from '../components/three/Storyline3DLazy.jsx';
 import AiInvestigationPanel from '../components/AiInvestigationPanel.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
+import AskAiPanel from '../components/AskAiPanel.jsx';
 import SimilarIncidentsPanel from '../components/SimilarIncidentsPanel.jsx';
+import MagnitudePanel from '../components/MagnitudePanel.jsx';
+import OffenseCasePanel from '../components/OffenseCasePanel.jsx';
+import { getOffense } from '../services/offenses.service.js';
+import CaseTimeline from '../components/CaseTimeline.jsx';
+import AffectedAssetsPanel from '../components/AffectedAssetsPanel.jsx';
+import RunPlaybookPanel from '../components/RunPlaybookPanel.jsx';
+import AttackGraphPanel from '../components/AttackGraphPanel.jsx';
+import { NEXT_STATUS, statusLabel } from '../services/caseLabels.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   getIncident, getRisk, getTimeline, getEvidence, getGraph, updateStatus, setFeedback,
 } from '../services/incidents.service.js';
 import { messageFromError } from '../services/errors.js';
 
-const NEXT_STATUS = {
-  OPEN: ['INVESTIGATING', 'FALSE_POSITIVE'],
-  INVESTIGATING: ['CONTAINED', 'FALSE_POSITIVE'],
-  CONTAINED: ['RESOLVED', 'FALSE_POSITIVE'],
-  RESOLVED: [],
-  FALSE_POSITIVE: [],
-};
 
 export default function IncidentDetailPage() {
   const { id } = useParams();
   const { hasRole } = useAuth();
-  const [data, setData] = useState({ incident: null, risk: null, timeline: [], evidence: null, graph: null });
+  const [data, setData] = useState({ incident: null, risk: null, timeline: [], evidence: null, graph: null, offense: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [highlighted, setHighlighted] = useState([]);
@@ -36,10 +37,10 @@ export default function IncidentDetailPage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [detail, risk, timeline, evidence, graph] = await Promise.all([
-        getIncident(id), getRisk(id), getTimeline(id), getEvidence(id), getGraph(id),
+      const [detail, risk, timeline, evidence, graph, offense] = await Promise.all([
+        getIncident(id), getRisk(id), getTimeline(id), getEvidence(id), getGraph(id), getOffense(id),
       ]);
-      setData({ incident: detail.incident, risk, timeline, evidence, graph });
+      setData({ incident: detail.incident, risk, timeline, evidence, graph, offense });
     } catch (e) {
       setError(messageFromError(e));
     } finally {
@@ -60,35 +61,60 @@ export default function IncidentDetailPage() {
   const canTriage = hasRole('ANALYST', 'ADMIN');
 
   return (
-    <div className="app-shell">
-      <NavBar />
-      <main className="content">
+    <>
         <DataState loading={loading} error={error} empty={!inc} emptyText="Incident not found.">
           {inc && (
             <>
               <div className="brand-row" style={{ justifyContent: 'space-between' }}>
-                <h2>Incident #{inc.id}: {inc.title}</h2>
+                <h2>Offense #{inc.id}: {inc.title}</h2>
                 <SeverityBadge severity={inc.severity} />
               </div>
-              <p className="subtitle">Status: <strong>{inc.status}</strong> · Feedback: {inc.feedback}</p>
+              <p className="subtitle">Status: <strong>{statusLabel(inc.status)}</strong> · Priority: <strong>{inc.priority}</strong>
+                {' '}· Assigned: <strong>{inc.assignedTo || 'unassigned'}</strong> · Feedback: {inc.feedback}</p>
 
               {canTriage && (
                 <div className="filters">
                   {(NEXT_STATUS[inc.status] || []).map((s) => (
-                    <button key={s} className="ghost" onClick={() => changeStatus(s)}>→ {s}</button>
+                    <button key={s} className="ghost" onClick={() => changeStatus(s)}>→ {statusLabel(s)}</button>
                   ))}
                   <button className="ghost" onClick={() => giveFeedback('TRUE_POSITIVE')}>Mark true positive</button>
                   <button className="ghost" onClick={() => giveFeedback('FALSE_POSITIVE')}>Mark false positive</button>
                 </div>
               )}
 
+              <MagnitudePanel magnitude={data.offense?.offense.magnitude} />
+
+              <AffectedAssetsPanel assets={data.offense?.assets} />
+
+              {data.offense?.threatIntel?.length > 0 && (
+                <section className="panel">
+                  <h3>Threat intelligence matches</h3>
+                  <ul className="breakdown">
+                    {data.offense.threatIntel.map((m) => (
+                      <li key={`${m.ip}-${m.list}`}><code>{m.ip}</code><span className="chip">{m.list}</span></li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {data.offense && (
+                <OffenseCasePanel offense={data.offense.offense} priority={inc.priority} notes={data.offense.notes}
+                  canEdit={canTriage} onChanged={load} />
+              )}
+
               {canTriage && (
                 <AiInvestigationPanel incidentId={id} canReview={canTriage} onHighlight={setHighlighted} />
               )}
 
+              <AskAiPanel incidentId={id} onHighlight={setHighlighted} />
+
+              <RunPlaybookPanel incidentId={id} canRun={canTriage} onRan={load} />
+
               {canTriage && <ActionsPanel incidentId={id} canAct={canTriage} />}
 
               <SimilarIncidentsPanel incidentId={id} />
+
+              <AttackGraphPanel events={data.evidence?.events} />
 
               <section className="panel">
                 <h3>Risk breakdown</h3>
@@ -111,17 +137,7 @@ export default function IncidentDetailPage() {
               </section>
 
               <div className="panel-grid">
-                <section className="panel">
-                  <h3>Timeline</h3>
-                  <ul className="breakdown">
-                    {data.timeline.map((t) => (
-                      <li key={t.id}>
-                        <span>{t.type} <span className="muted small">{t.actor || 'system'}</span></span>
-                        <span className="muted small">{new Date(t.createdAt).toLocaleTimeString()}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <CaseTimeline incidentId={id} refreshKey={data.timeline.length} />
 
                 <section className="panel">
                   <h3>Alerts</h3>
@@ -157,7 +173,6 @@ export default function IncidentDetailPage() {
             </>
           )}
         </DataState>
-      </main>
-    </div>
+    </>
   );
 }
