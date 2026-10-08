@@ -45,6 +45,11 @@ public class SecurityEvent {
     @JoinColumn(name = "site_id")
     private com.sentinelai.site.domain.Site site;
 
+    /** The inventoried asset this event concerns (set at ingest by AssetResolver). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "asset_id")
+    private com.sentinelai.asset.Asset asset;
+
     // Optional client-supplied id for idempotent ingestion (unique per org when present).
     @Column(name = "client_event_id", length = 100)
     private String clientEventId;

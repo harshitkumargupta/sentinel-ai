@@ -22,6 +22,7 @@ const OffensesPage = lazy(() => import('./pages/OffensesPage.jsx'));
 const SearchPage = lazy(() => import('./pages/SearchPage.jsx'));
 const DemoCenterPage = lazy(() => import('./pages/DemoCenterPage.jsx'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
+const AssetsPage = lazy(() => import('./pages/AssetsPage.jsx'));
 const ReferenceSetsPage = lazy(() => import('./pages/ReferenceSetsPage.jsx'));
 
 const admin = (el) => <ProtectedRoute roles={['ADMIN']}>{el}</ProtectedRoute>;
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/reports" element={analyst(<ReportsPage />)} />
+        <Route path="/assets" element={<AssetsPage />} />
         <Route path="/reference-sets" element={<ReferenceSetsPage />} />
         <Route path="/demo-center" element={admin(<DemoCenterPage />)} />
         <Route path="/admin" element={admin(<AdminPage />)} />

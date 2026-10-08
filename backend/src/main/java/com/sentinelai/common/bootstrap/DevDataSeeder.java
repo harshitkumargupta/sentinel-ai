@@ -1,5 +1,10 @@
 package com.sentinelai.common.bootstrap;
 
+import com.sentinelai.asset.Asset;
+import com.sentinelai.asset.AssetCriticality;
+import com.sentinelai.asset.AssetEnvironment;
+import com.sentinelai.asset.AssetRepository;
+import com.sentinelai.asset.AssetType;
 import com.sentinelai.auth.domain.Role;
 import com.sentinelai.auth.domain.User;
 import com.sentinelai.auth.repository.UserRepository;
@@ -48,6 +53,7 @@ public class DevDataSeeder implements CommandLineRunner {
     private final HoneytokenRepository honeytokenRepository;
     private final UserSiteAccessRepository userSiteAccessRepository;
     private final AdminBaselineRepository adminBaselineRepository;
+    private final AssetRepository assetRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     private static final Long DEFAULT_SITE_ID = 1L;
@@ -63,6 +69,25 @@ public class DevDataSeeder implements CommandLineRunner {
         seedDetectionRules(org);
         seedHoneytokens(org);
         seedSiteAccessAndBaselines();
+        seedAssets(org);
+    }
+
+    /** Sample inventory (matches the bundled datasets' hosts/IPs) so asset criticality shows in risk. */
+    private void seedAssets(Organization org) {
+        if (assetRepository.count() > 0) {
+            return;
+        }
+        seedAsset(org, "web-01", "10.20.0.15", "Platform team", AssetType.SERVER, AssetEnvironment.PRODUCTION, AssetCriticality.HIGH);
+        seedAsset(org, "SRV-DB-02", "10.20.0.10", "Data team", AssetType.SERVER, AssetEnvironment.PRODUCTION, AssetCriticality.CRITICAL);
+        seedAsset(org, "SRV-APP-11", "10.20.0.5", "Platform team", AssetType.SERVER, AssetEnvironment.PRODUCTION, AssetCriticality.HIGH);
+        seedAsset(org, "WS-FIN-023", "10.20.3.23", "Finance", AssetType.WORKSTATION, AssetEnvironment.CORPORATE, AssetCriticality.MEDIUM);
+        log.info("Seeded 4 sample assets.");
+    }
+
+    private void seedAsset(Organization org, String host, String ip, String owner, AssetType type,
+                           AssetEnvironment env, AssetCriticality crit) {
+        assetRepository.save(Asset.builder().org(org).hostname(host).ip(ip).owner(owner).type(type)
+                .environment(env).criticality(crit).build());
     }
 
     private void seedSiteAccessAndBaselines() {

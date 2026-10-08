@@ -1,0 +1,7 @@
+hostname,ip,owner,type,environment,criticality,description
+web-01,10.20.0.15,Platform team,SERVER,PRODUCTION,HIGH,Public nginx web server (sample nginx/auth.log datasets)
+SRV-DB-02,10.20.0.10,Data team,SERVER,PRODUCTION,CRITICAL,Customer database
+SRV-APP-11,10.20.0.5,Platform team,SERVER,PRODUCTION,HIGH,Orders application
+WS-FIN-023,10.20.3.23,Finance,WORKSTATION,CORPORATE,MEDIUM,Finance workstation
+LT-ENG-112,10.20.4.112,Engineering,LAPTOP,CORPORATE,MEDIUM,Engineer laptop
+edge-fw-01,10.20.0.1,Network team,NETWORK,PRODUCTION,CRITICAL,Perimeter firewall

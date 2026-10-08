@@ -70,7 +70,7 @@ public class CsvParser implements LogLineParser {
     }
 
     /** Split one CSV record (quotes, escaped quotes, commas inside quotes). */
-    static List<String> split(String line) {
+    public static List<String> split(String line) {
         List<String> out = new ArrayList<>();
         StringBuilder cur = new StringBuilder();
         boolean quoted = false;

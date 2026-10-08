@@ -1,6 +1,8 @@
 package com.sentinelai.ingestion;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sentinelai.asset.Asset;
+import com.sentinelai.asset.AssetResolver;
 import com.sentinelai.common.exception.BadRequestException;
 import com.sentinelai.common.repository.OrganizationRepository;
 import com.sentinelai.event.domain.EventOutcome;
@@ -57,6 +59,7 @@ public class IngestionService {
     private final ObjectProvider<EventPublisher> eventPublisher;
     private final OutboxService outboxService;
     private final Clock clock;
+    private final AssetResolver assetResolver;
 
     public IngestionService(List<EventNormalizer> normalizerBeans,
                             SecurityEventRepository eventRepository,
@@ -68,7 +71,8 @@ public class IngestionService {
                             KafkaProperties kafkaProperties,
                             ObjectProvider<EventPublisher> eventPublisher,
                             OutboxService outboxService,
-                            Clock clock) {
+                            Clock clock,
+                            AssetResolver assetResolver) {
         this.normalizers = normalizerBeans.stream()
                 .collect(Collectors.toMap(EventNormalizer::sourceType, Function.identity()));
         this.eventRepository = eventRepository;
@@ -81,6 +85,7 @@ public class IngestionService {
         this.eventPublisher = eventPublisher;
         this.outboxService = outboxService;
         this.clock = clock;
+        this.assetResolver = assetResolver;
     }
 
     public int maxBatchSize() {
@@ -125,6 +130,11 @@ public class IngestionService {
             site.setLastEventAt(timestamp); // for site-silence detection
         }
 
+        // Link the event to an inventoried asset; its criticality feeds risk unless the source set one.
+        Asset asset = assetResolver.resolve(orgId, entityKey, n.getSourceIp(), n.getResource()).orElse(null);
+        Byte criticality = n.getAssetCriticality() != null ? n.getAssetCriticality()
+                : asset != null ? (byte) asset.getCriticality().level() : null;
+
         SecurityEvent event = eventRepository.save(SecurityEvent.builder()
                 .org(organizationRepository.getReferenceById(orgId))
                 .site(site)
@@ -136,7 +146,8 @@ public class IngestionService {
                 .username(n.getUsername())
                 .userAgent(n.getUserAgent())
                 .resource(n.getResource())
-                .assetCriticality(n.getAssetCriticality())
+                .assetCriticality(criticality)
+                .asset(asset)
                 .rawPayload(rawPayload)
                 .geoCountry(geoCountry)
                 .geoCity(n.getGeoCity())
