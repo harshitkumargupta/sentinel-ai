@@ -11,6 +11,7 @@ import { getDemoInfo } from '../services/demo.service.js';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: '▦' },
+  { to: '/executive', label: 'Executive', icon: '◔' },
   { to: '/events', label: 'Events', icon: '≋' },
   { to: '/search', label: 'Event Search', icon: '⌕' },
   { to: '/alerts', label: 'Alerts', icon: '⚑' },

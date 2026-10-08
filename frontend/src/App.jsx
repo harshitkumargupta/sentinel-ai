@@ -27,6 +27,7 @@ const NotificationSettingsPage = lazy(() => import('./pages/NotificationSettings
 const PlaybooksPage = lazy(() => import('./pages/PlaybooksPage.jsx'));
 const HoneytokensPage = lazy(() => import('./pages/HoneytokensPage.jsx'));
 const CoveragePage = lazy(() => import('./pages/CoveragePage.jsx'));
+const ExecutivePage = lazy(() => import('./pages/ExecutivePage.jsx'));
 const ReferenceSetsPage = lazy(() => import('./pages/ReferenceSetsPage.jsx'));
 
 const admin = (el) => <ProtectedRoute roles={['ADMIN']}>{el}</ProtectedRoute>;
@@ -41,6 +42,7 @@ export default function App() {
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/executive" element={<ExecutivePage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/incidents" element={<IncidentsPage />} />
