@@ -220,3 +220,27 @@ key (see `agent/README.md`). JSON events can be posted to `POST /api/ingest/even
 - **First build needs internet** (image and dependency download). Runtime is offline.
 - **Full page reloads** log one `401 /api/auth/me` in the console. This is the normal token-refresh
   handshake. The dashboard's pipeline card logs a 404 because Kafka is off in the demo profile.
+
+---
+
+## 5. Case management, reports, assets, UBA, saved searches, notifications, playbooks
+
+| Page / where | What to click | What appears | QRadar / SOC concept |
+|---|---|---|---|
+| **Offense detail → Case** | Status buttons (New → In Progress → Contained → Resolved → Closed; False Positive → Closed; reopen); Priority P1–P4; Assigned to; Add/Edit/Delete note | Status, priority and assignee update. Notes show author, time and "edited by". The **Case timeline** merges status, assignment, priority, notes, response actions, AI analyses and detection, with kind filters | Case management (QRadar offense notes/assignment, Resilient case) |
+| **Incidents** | Filters: status, priority, assignee (or Unassigned), severity | Columns show priority and assignee. Viewers are read-only; every change is audited | Case queue |
+| **Reports** | Pick a type (Incident Summary, Top Attackers, Alerts by MITRE Technique, Response Actions Taken), dates, PDF/CSV → **Generate** | The file downloads and is kept in *Generated reports*. Admins add **daily/weekly schedules** (UTC hour); **Run now** generates immediately | QRadar Reports + scheduling |
+| **Assets** | Add/Edit, **Import from CSV** (sample `samples/assets.csv`), **Relink stored events** | Assets with criticality, owner, type, environment, linked events, open incidents and open vulns. **Details** lists vulnerabilities and incidents | Asset model / asset profiles |
+| **Offense → Risk breakdown** | — | `asset_criticality +N: Max asset criticality 4: SRV-DB-02 (CRITICAL)` and magnitude relevance `+4 asset criticality` | Asset weight in offense magnitude |
+| **Assets → Vulnerability scan (CSV)** | Upload `samples/vulnerabilities.csv` | Findings attach by hostname/IP (unmatched hosts reported). The incident page shows **Affected assets** with open CVEs, and risk gains a `vulnerabilities` factor naming the CVEs | Vulnerability scanner integration (QRadar VM) |
+| **Rules** | `UBA: unusual login hour`, `UBA: new login location`, `UBA: failed-login spike` (on/off, thresholds in the editor) | Alerts such as "Unusual login hour for alice: 03:00 UTC (0% of 13 prior logins within ±1h)" | UBA (QRadar User Behavior Analytics, rule-based) |
+| **Event Search** | **Save search** → *Saved searches*: Run / **Pin to dashboard** / Delete | Pinned searches appear on the **Dashboard** as widgets with a count and a 24-hour sparkline (live; click to open) | Saved searches + dashboard items |
+| **Notifications** (admin) and the **bell** | Add channel (Email / Webhook / In-app), add rule (min severity, rule type, created/escalated, channels), **Test** | Email with no SMTP shows a **Mock channel** label and is only logged. The delivery log shows SENT / MOCKED / FAILED with attempts. The bell shows unread items | Offense notifications |
+| **Playbooks** and offense → **Playbooks** panel | **Run: Brute Force Response** (or Data Exfiltration Response); admins edit steps (JSON), enable or auto-run | Step results: case moved to In Progress + priority, SOC notified, **Block IP proposed** (appears under Response actions for dry-run/approve), IP added to *Watchlist IPs*. The run history and audit log record it | SOAR playbooks (Resilient) |
+
+### Partial / simulated (sections 5)
+- **Risk is computed when alerts join an incident.** Importing assets or vulnerabilities later, or relinking, doesn't rescore existing incidents until they next receive an alert.
+- **Email needs `sentinel.notifications.smtp.host`** (password only via `SMTP_PASSWORD`). Without it, email is a logged mock. Webhooks to unreachable hosts fail after retries, which is recorded and never blocks detection.
+- **Playbooks only propose actions**, and the action adapters are in-memory mocks. Auto-run is off by default.
+- **UBA baselines** are simple statistics over each user's stored events (hour histogram, known country and /24, hourly failure mean/σ), not ML. Users with too little history are skipped.
+- **Report schedules** run inside the backend process (no distributed lock); one instance is assumed.
