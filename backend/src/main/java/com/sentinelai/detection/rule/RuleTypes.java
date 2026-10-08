@@ -17,6 +17,9 @@ public final class RuleTypes {
     public static final String DATA_EXFILTRATION = "DATA_EXFILTRATION";
     public static final String PHISHING = "PHISHING";
     public static final String DDOS = "DDOS";
+    public static final String UBA_UNUSUAL_HOUR = "UBA_UNUSUAL_HOUR";
+    public static final String UBA_NEW_LOCATION = "UBA_NEW_LOCATION";
+    public static final String UBA_FAILED_SPIKE = "UBA_FAILED_SPIKE";
 
     private RuleTypes() {
     }

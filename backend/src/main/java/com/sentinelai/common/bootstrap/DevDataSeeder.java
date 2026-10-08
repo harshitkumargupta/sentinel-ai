@@ -177,6 +177,13 @@ public class DevDataSeeder implements CommandLineRunner {
         seedRule(org, admin, "Traffic flood (DDoS)", "DDOS",
                 "{\"threshold\":150,\"windowSeconds\":60,\"groupBy\":\"entityKey\"}", Severity.HIGH, "T1498");
 
+        seedRule(org, admin, "UBA: unusual login hour", "UBA_UNUSUAL_HOUR",
+                "{\"minSamples\":10,\"lookbackDays\":30,\"toleranceHours\":1,\"maxSharePercent\":5}", Severity.MEDIUM, "T1078");
+        seedRule(org, admin, "UBA: new login location", "UBA_NEW_LOCATION",
+                "{\"minSamples\":5,\"lookbackDays\":30,\"checkCountry\":1,\"checkSubnet\":1}", Severity.MEDIUM, "T1078");
+        seedRule(org, admin, "UBA: failed-login spike", "UBA_FAILED_SPIKE",
+                "{\"windowSeconds\":3600,\"lookbackDays\":14,\"minCount\":5,\"zThreshold\":3}", Severity.HIGH, "T1110");
+
         int added = (int) detectionRuleRepository.count() - before;
         if (added > 0) {
             log.info("Seeded {} detection rule(s).", added);

@@ -25,14 +25,19 @@ public class RuleConfigValidator {
     static final int MAX_CONFIG_CHARS = 4096;
 
     /** Numeric config keys and their inclusive bounds. */
-    private static final Map<String, long[]> BOUNDS = Map.of(
-            "threshold", new long[]{1, 100_000},
-            "windowSeconds", new long[]{1, 7 * 24 * 3600},
-            "distinctUsers", new long[]{1, 10_000},
-            "minSecondsBetweenCountries", new long[]{1, 7 * 24 * 3600},
-            "oddHourStart", new long[]{0, 23},
-            "oddHourEnd", new long[]{0, 23},
-            "minBytes", new long[]{1, Long.MAX_VALUE});
+    private static final Map<String, long[]> BOUNDS = Map.ofEntries(
+            Map.entry("threshold", new long[]{1, 100_000}),
+            Map.entry("windowSeconds", new long[]{1, 7 * 24 * 3600}),
+            Map.entry("distinctUsers", new long[]{1, 10_000}),
+            Map.entry("minSecondsBetweenCountries", new long[]{1, 7 * 24 * 3600}),
+            Map.entry("oddHourStart", new long[]{0, 23}),
+            Map.entry("oddHourEnd", new long[]{0, 23}),
+            Map.entry("minBytes", new long[]{1, Long.MAX_VALUE}),
+            Map.entry("minSamples", new long[]{1, 10_000}),
+            Map.entry("lookbackDays", new long[]{1, 365}),
+            Map.entry("toleranceHours", new long[]{0, 12}),
+            Map.entry("maxSharePercent", new long[]{0, 100}),
+            Map.entry("minCount", new long[]{1, 100_000}));
 
     private final Set<String> ruleTypes;
     private final BuildingBlockService buildingBlocks;
