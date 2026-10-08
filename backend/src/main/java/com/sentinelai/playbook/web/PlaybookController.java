@@ -79,8 +79,9 @@ public class PlaybookController {
     @PostMapping("/api/actions/{id}/execute")
     @PreAuthorize("hasAnyRole('ANALYST','ADMIN')")
     public ApiResponse<PlaybookActionResponse> execute(@PathVariable Long id,
+                                                       @RequestParam(defaultValue = "false") boolean confirm,
                                                        @AuthenticationPrincipal AppUserPrincipal actor) {
-        return ApiResponse.ok(playbookService.execute(id, actor));
+        return ApiResponse.ok(playbookService.execute(id, actor, confirm));
     }
 
     @PostMapping("/api/actions/{id}/rollback")

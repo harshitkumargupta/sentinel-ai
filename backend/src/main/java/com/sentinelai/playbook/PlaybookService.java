@@ -8,6 +8,7 @@ import com.sentinelai.auth.repository.UserRepository;
 import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.domain.Severity;
 import com.sentinelai.common.exception.BadRequestException;
+import com.sentinelai.common.exception.ConflictException;
 import com.sentinelai.common.exception.InvalidStateTransitionException;
 import com.sentinelai.common.exception.NotFoundException;
 import com.sentinelai.incident.correlation.TimelineService;
@@ -73,11 +74,12 @@ public class PlaybookService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final BlastRadiusService blastRadius;
 
     public PlaybookService(List<ResponseAction> actionBeans, PlaybookActionRepository repository,
                            PlaybookProperties props, AuditService auditService, TimelineService timeline,
                            AdminGuardService adminGuard, UserRepository userRepository,
-                           ObjectMapper objectMapper, Clock clock) {
+                           ObjectMapper objectMapper, Clock clock, BlastRadiusService blastRadius) {
         this.actions = actionBeans.stream().collect(Collectors.toMap(ResponseAction::type, Function.identity()));
         this.repository = repository;
         this.props = props;
@@ -87,6 +89,7 @@ public class PlaybookService {
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.blastRadius = blastRadius;
     }
 
     /** Recommendation verbs that map onto a differently-named action ({@code monitor} → watchlist). */
@@ -112,10 +115,12 @@ public class PlaybookService {
     public PlaybookActionResponse dryRun(Long actionId, AppUserPrincipal actor) {
         PlaybookAction action = load(actionId, actor);
         DryRunResult result = responseAction(action).dryRun(ctx(action));
-        action.setDryRunResult(toJson(result));
+        BlastRadiusService.Preview preview = blastRadius.preview(actor.getOrgId(), action.getActionType(), action.getTargetRef());
+        String json = toJson(result, preview);
+        action.setDryRunResult(json);
         repository.save(action);
         auditService.record(actor.getOrgId(), actor.getUserId(), "PLAYBOOK_DRY_RUN", "playbook_action",
-                actionId, toJson(result), null);
+                actionId, json, null);
         return toResponse(action);
     }
 
@@ -166,9 +171,17 @@ public class PlaybookService {
         return toResponse(action);
     }
 
-    /** Execute an approved action: allow-list + protected-target guard, idempotent, retried adapter. */
     @Transactional
     public PlaybookActionResponse execute(Long actionId, AppUserPrincipal actor) {
+        return execute(actionId, actor, false);
+    }
+
+    /**
+     * Execute an approved action: allow-list + protected-target guard, idempotent, retried adapter.
+     * A HIGH-impact action (blast-radius preview) also needs {@code confirmed=true}.
+     */
+    @Transactional
+    public PlaybookActionResponse execute(Long actionId, AppUserPrincipal actor, boolean confirmed) {
         PlaybookAction action = load(actionId, actor);
         if (action.getStatus() == PlaybookActionStatus.EXECUTED) {
             return toResponse(action); // idempotent: a repeated execute is a no-op
@@ -186,6 +199,11 @@ public class PlaybookService {
         DryRunResult dry = impl.dryRun(ctx(action));
         if (!dry.allowed()) {
             throw new BadRequestException("Refused: " + dry.reason());
+        }
+        // Protected targets are refused outright (above); otherwise HIGH impact needs explicit confirmation.
+        BlastRadiusService.Preview preview = blastRadius.preview(actor.getOrgId(), action.getActionType(), action.getTargetRef());
+        if (preview.requiresConfirmation() && !confirmed) {
+            throw new ConflictException("High-impact action (" + String.join("; ", preview.reasons()) + "): confirm to execute");
         }
 
         try {
@@ -307,6 +325,15 @@ public class PlaybookService {
     private void audit(AppUserPrincipal actor, PlaybookAction action, String op, String details) {
         auditService.record(actor.getOrgId(), actor.getUserId(), op, "playbook_action", action.getId(),
                 details, null);
+    }
+
+    private String toJson(DryRunResult r, BlastRadiusService.Preview preview) {
+        String base = toJson(r);
+        try {
+            return base.substring(0, base.length() - 1) + ",\"preview\":" + objectMapper.writeValueAsString(preview) + "}";
+        } catch (Exception e) {
+            return base;
+        }
     }
 
     private String toJson(DryRunResult r) {

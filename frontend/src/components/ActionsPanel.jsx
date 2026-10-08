@@ -71,6 +71,23 @@ export default function ActionsPanel({ incidentId, canAct }) {
     }
   }
 
+  /** Execute; HIGH-impact actions (blast radius) need an explicit confirmation first. */
+  async function execute(id) {
+    const a = actions.find((x) => x.id === id);
+    const preview = a?.dryRun?.preview;
+    if (preview?.requiresConfirmation && !window.confirm(`HIGH impact: ${preview.reasons.join('; ')}.\n\nExecute anyway?`)) return;
+    try {
+      await executeAction(id, Boolean(preview?.requiresConfirmation));
+    } catch (e) {
+      const msg = e?.response?.data?.error?.message || '';
+      if (e?.response?.status === 409 && msg.startsWith('High-impact') && window.confirm(`${msg}.\n\nExecute anyway?`)) {
+        await executeAction(id, true);
+      } else {
+        throw e;
+      }
+    }
+  }
+
   async function propose(type, target) {
     setBusy(`${type}:${target}`);
     setError(null);
@@ -126,6 +143,17 @@ export default function ActionsPanel({ incidentId, canAct }) {
                 : `refused — ${a.dryRun.reason}`}
             </p>
           )}
+          {a.dryRun?.preview && (
+            <div className="small" style={{ margin: '0.25rem 0' }}>
+              <span className={`ai-badge ${a.dryRun.preview.impact === 'HIGH' ? 'badge-rejected' : a.dryRun.preview.impact === 'MEDIUM' ? 'badge-fallback' : 'badge-valid'}`}>
+                Impact {a.dryRun.preview.impact}</span>{' '}
+              {a.dryRun.preview.users.length} user(s){a.dryRun.preview.admins > 0 && <strong> incl. {a.dryRun.preview.admins} admin</strong>}
+              {' · '}{a.dryRun.preview.activeSessions} active session(s)
+              {a.dryRun.preview.hosts.length > 0 && <> · hosts {a.dryRun.preview.hosts.join(', ')}</>}
+              {a.dryRun.preview.assets.length > 0 && <> · assets {a.dryRun.preview.assets.map((x) => `${x.asset} (${x.criticality})`).join(', ')}</>}
+              <div className="muted">{a.dryRun.preview.reasons.join('; ')}{a.dryRun.preview.requiresConfirmation && ' — execution will ask for confirmation'}</div>
+            </div>
+          )}
           {a.status === 'FAILED' && a.failureReason && (
             <p className="error-text small">Failed: {a.failureReason}</p>
           )}
@@ -142,7 +170,7 @@ export default function ActionsPanel({ incidentId, canAct }) {
               {a.status === 'APPROVED' && (
                 <>
                   <button className="ghost" disabled={busy === a.id} onClick={() => run(a.id, dryRunAction)}>Dry-run</button>
-                  <button disabled={busy === a.id} onClick={() => run(a.id, executeAction)}>Execute</button>
+                  <button disabled={busy === a.id} onClick={() => run(a.id, execute)}>Execute</button>
                 </>
               )}
               {a.status === 'EXECUTED' && (

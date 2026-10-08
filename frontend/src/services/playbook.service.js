@@ -23,8 +23,8 @@ export async function rejectAction(id) {
   return data.data;
 }
 
-export async function executeAction(id) {
-  const { data } = await api.post(`/actions/${id}/execute`);
+export async function executeAction(id, confirm = false) {
+  const { data } = await api.post(`/actions/${id}/execute`, null, { params: { confirm } });
   return data.data;
 }
 
