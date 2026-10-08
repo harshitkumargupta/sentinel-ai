@@ -13,4 +13,8 @@ public interface HoneytokenRepository extends JpaRepository<Honeytoken, Long> {
     List<Honeytoken> findByOrg_Id(Long orgId);
 
     Optional<Honeytoken> findByValueHash(String valueHash);
+
+    Optional<Honeytoken> findFirstByOrg_IdAndValueHash(Long orgId, String valueHash);
+
+    List<Honeytoken> findByKind(com.sentinelai.honeytoken.domain.HoneytokenKind kind);
 }

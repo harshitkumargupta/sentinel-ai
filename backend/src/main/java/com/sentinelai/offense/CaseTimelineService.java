@@ -81,8 +81,9 @@ public class CaseTimelineService {
         return switch (type) {
             case "INCIDENT_CREATED" -> new Entry(t.getCreatedAt(), "DETECTION", actor, "Case opened",
                     "Correlated on " + d.path("correlationKey").asText("?"));
-            case "ALERT_JOINED" -> new Entry(t.getCreatedAt(), "DETECTION", actor,
-                    "Alert joined: " + d.path("ruleType").asText("?"), null);
+            case "ALERT_JOINED" -> "HONEYTOKEN".equals(d.path("ruleType").asText())
+                    ? new Entry(t.getCreatedAt(), "DETECTION", actor, "Decoy touched (honeytoken)", null)
+                    : new Entry(t.getCreatedAt(), "DETECTION", actor, "Alert joined: " + d.path("ruleType").asText("?"), null);
             case "ESCALATED" -> new Entry(t.getCreatedAt(), "DETECTION", actor,
                     "Escalated to " + d.path("severity").asText("?"), null);
             case "RESCORED" -> new Entry(t.getCreatedAt(), "SYSTEM", actor,

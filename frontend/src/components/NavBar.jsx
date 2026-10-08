@@ -18,6 +18,7 @@ const NAV = [
   { to: '/incidents', label: 'Incidents', icon: '☰' },
   { to: '/assets', label: 'Assets', icon: '▣' },
   { to: '/playbooks', label: 'Playbooks', icon: '⚡' },
+  { to: '/honeytokens', label: 'Honeytokens', icon: '◎', roles: ['ANALYST', 'ADMIN'] },
   { to: '/reports', label: 'Reports', icon: '▤', roles: ['ANALYST', 'ADMIN'] },
   { to: '/evaluation', label: 'Evaluation', icon: '✓' },
   { to: '/rules', label: 'Rules', icon: '⚙︎' },

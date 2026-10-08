@@ -36,41 +36,55 @@ public class HoneytokenRule implements DetectionRuleEvaluator {
 
     @Override
     public Optional<AlertDraft> evaluate(SecurityEvent event, DetectionRule rule, RuleContext ctx) {
-        String candidate = candidateValue(event);
-        if (candidate == null || candidate.isBlank()) {
-            return Optional.empty();
+        Long orgId = event.getOrg().getId();
+        for (String candidate : candidates(event)) {
+            Optional<Honeytoken> match = honeytokenRepository.findFirstByOrg_IdAndValueHash(orgId, Hashing.sha256Hex(candidate));
+            if (match.isEmpty()) {
+                continue;
+            }
+            Honeytoken token = match.get();
+            if (!ctx.dryRun()) { // don't mutate counters during a backtest
+                token.setTriggeredCount(token.getTriggeredCount() + 1);
+                token.setLastTriggeredAt(event.getEventTimestamp());
+                honeytokenRepository.save(token);
+            }
+            String label = token.getDisplayValue() != null ? token.getDisplayValue() : token.getType();
+            String message = ("Decoy touched: %s %s (%s). Nothing legitimate uses this value, so any use means "
+                    + "someone is probing or holds stolen data.").formatted(token.getKind(), label,
+                    token.getDescription() == null ? token.getType() : token.getDescription());
+            // A honeytoken hit is unambiguous — force CRITICAL regardless of the rule's configured severity.
+            return Optional.of(new AlertDraft(
+                    Severity.CRITICAL, rule.getMitreTechnique(), message,
+                    "honeytoken:" + token.getId(), List.of(event.getId())));
         }
-        Optional<Honeytoken> match = honeytokenRepository.findByValueHash(Hashing.sha256Hex(candidate));
-        if (match.isEmpty()) {
-            return Optional.empty();
-        }
-        Honeytoken token = match.get();
-        if (!ctx.dryRun()) { // don't mutate counters during a backtest
-            token.setTriggeredCount(token.getTriggeredCount() + 1);
-            honeytokenRepository.save(token);
-        }
-
-        String message = "Honeytoken touched: %s (%s)".formatted(token.getType(), token.getDescription());
-        // A honeytoken hit is unambiguous — force CRITICAL regardless of the rule's configured severity.
-        return Optional.of(new AlertDraft(
-                Severity.CRITICAL, rule.getMitreTechnique(), message,
-                "honeytoken:" + token.getId(), List.of(event.getId())));
+        return Optional.empty();
     }
 
-    private String candidateValue(SecurityEvent event) {
+    /** Every place a decoy can show up: explicit value / API key, the resource (with and without query), the username. */
+    private List<String> candidates(SecurityEvent event) {
+        List<String> out = new java.util.ArrayList<>();
         if (event.getRawPayload() != null && !event.getRawPayload().isBlank()) {
             try {
-                JsonNode node = objectMapper.readTree(event.getRawPayload()).get("value");
-                if (node != null && !node.isNull()) {
-                    return node.asText();
+                JsonNode node = objectMapper.readTree(event.getRawPayload());
+                for (String f : List.of("value", "apiKey", "token")) {
+                    if (node.hasNonNull(f)) {
+                        out.add(node.get(f).asText());
+                    }
                 }
             } catch (Exception ignored) {
-                // fall through to other candidates
+                // not JSON: the structured fields below still apply
             }
         }
         if (event.getResource() != null) {
-            return event.getResource();
+            out.add(event.getResource());
+            int q = event.getResource().indexOf('?');
+            if (q > 0) {
+                out.add(event.getResource().substring(0, q));
+            }
         }
-        return event.getUsername();
+        if (event.getUsername() != null) {
+            out.add(event.getUsername());
+        }
+        return out.stream().filter(v -> !v.isBlank()).distinct().toList();
     }
 }
