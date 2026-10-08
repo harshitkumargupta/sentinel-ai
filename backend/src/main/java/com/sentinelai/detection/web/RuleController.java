@@ -38,13 +38,19 @@ public class RuleController {
 
     // Reading rules is allowed for any authenticated user (VIEWER+).
     @GetMapping
-    public ApiResponse<List<RuleResponse>> list() {
-        return ApiResponse.ok(ruleService.list());
+    public ApiResponse<List<RuleResponse>> list(@AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(ruleService.list(actor));
+    }
+
+    /** Rule types the engine can evaluate (one per registered evaluator). */
+    @GetMapping("/types")
+    public ApiResponse<java.util.Set<String>> types() {
+        return ApiResponse.ok(ruleService.ruleTypes());
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<RuleResponse> get(@PathVariable Long id) {
-        return ApiResponse.ok(ruleService.get(id));
+    public ApiResponse<RuleResponse> get(@PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(ruleService.get(id, actor));
     }
 
     @PostMapping

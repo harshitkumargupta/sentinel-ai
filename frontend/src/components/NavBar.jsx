@@ -12,6 +12,7 @@ const NAV = [
   { to: '/alerts', label: 'Alerts', icon: '⚑' },
   { to: '/incidents', label: 'Incidents', icon: '✸' },
   { to: '/evaluation', label: 'Evaluation', icon: '✓' },
+  { to: '/rules', label: 'Rules', icon: '⚙︎' },
   { to: '/log-sources', label: 'Log Sources', icon: '⇲', roles: ['ANALYST', 'ADMIN'] },
   { to: '/sites', label: 'Sites', icon: '⌂' },
   { to: '/admin', label: 'Admin', icon: '⚙', role: 'ADMIN' },

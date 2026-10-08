@@ -25,15 +25,20 @@ public class RuleService {
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final RuleConfigValidator validator;
 
     @Transactional(readOnly = true)
-    public List<RuleResponse> list() {
-        return ruleRepository.findAll().stream().map(RuleResponse::from).toList();
+    public List<RuleResponse> list(AppUserPrincipal actor) {
+        return ruleRepository.findByOrg_IdOrderByIdAsc(actor.getOrgId()).stream().map(RuleResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
-    public RuleResponse get(Long id) {
-        return RuleResponse.from(load(id));
+    public RuleResponse get(Long id, AppUserPrincipal actor) {
+        return RuleResponse.from(load(id, actor));
+    }
+
+    public java.util.Set<String> ruleTypes() {
+        return validator.ruleTypes();
     }
 
     @Transactional
@@ -46,7 +51,7 @@ public class RuleService {
                 .name(req.name())
                 .description(req.description())
                 .ruleType(req.ruleType())
-                .config(req.config())
+                .config(validator.validate(actor.getOrgId(), req.ruleType(), req.config()))
                 .severity(req.severity())
                 .mitreTechnique(req.mitreTechnique())
                 .enabled(req.enabled() == null || req.enabled())
@@ -59,7 +64,12 @@ public class RuleService {
 
     @Transactional
     public RuleResponse update(Long id, UpdateRuleRequest req, AppUserPrincipal actor) {
-        DetectionRule rule = load(id);
+        DetectionRule rule = load(id, actor);
+        if (req.config() != null || req.ruleType() != null) {
+            String type = req.ruleType() != null ? req.ruleType() : rule.getRuleType();
+            String config = req.config() != null ? req.config() : rule.getConfig();
+            rule.setConfig(validator.validate(actor.getOrgId(), type, config));
+        }
         if (req.name() != null) {
             rule.setName(req.name());
         }
@@ -68,9 +78,6 @@ public class RuleService {
         }
         if (req.ruleType() != null) {
             rule.setRuleType(req.ruleType());
-        }
-        if (req.config() != null) {
-            rule.setConfig(req.config());
         }
         if (req.severity() != null) {
             rule.setSeverity(req.severity());
@@ -89,7 +96,7 @@ public class RuleService {
 
     @Transactional
     public RuleResponse setEnabled(Long id, boolean enabled, AppUserPrincipal actor) {
-        DetectionRule rule = load(id);
+        DetectionRule rule = load(id, actor);
         rule.setEnabled(enabled);
         ruleRepository.save(rule);
         audit(actor, enabled ? "RULE_ENABLE" : "RULE_DISABLE", rule.getId());
@@ -98,13 +105,14 @@ public class RuleService {
 
     @Transactional
     public void delete(Long id, AppUserPrincipal actor) {
-        DetectionRule rule = load(id);
+        DetectionRule rule = load(id, actor);
         ruleRepository.delete(rule);
         audit(actor, "RULE_DELETE", id);
     }
 
-    private DetectionRule load(Long id) {
+    private DetectionRule load(Long id, AppUserPrincipal actor) {
         return ruleRepository.findById(id)
+                .filter(r -> r.getOrg().getId().equals(actor.getOrgId()))
                 .orElseThrow(() -> new NotFoundException("Rule not found: " + id));
     }
 

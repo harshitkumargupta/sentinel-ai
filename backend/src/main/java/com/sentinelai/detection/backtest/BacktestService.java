@@ -3,6 +3,7 @@ package com.sentinelai.detection.backtest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sentinelai.common.exception.BadRequestException;
 import com.sentinelai.common.exception.NotFoundException;
+import com.sentinelai.detection.buildingblock.BuildingBlockMatcher;
 import com.sentinelai.detection.domain.BacktestRun;
 import com.sentinelai.detection.domain.DetectionRule;
 import com.sentinelai.detection.engine.AlertDraft;
@@ -36,6 +37,7 @@ public class BacktestService {
     private final SecurityEventRepository eventRepository;
     private final BacktestRunRepository backtestRunRepository;
     private final List<DetectionRuleEvaluator> evaluatorBeans;
+    private final BuildingBlockMatcher buildingBlocks;
 
     @Transactional
     public BacktestResult backtest(Long ruleId, Long orgId, JsonNode configOverride, Instant from, Instant to) {
@@ -71,6 +73,9 @@ public class BacktestService {
         List<String> samples = new ArrayList<>();
         for (SecurityEvent event : events) {
             ctx.advance(event);
+            if (!buildingBlocks.matches(event, probe)) {
+                continue;
+            }
             Optional<AlertDraft> draft = evaluator.evaluate(event, probe, ctx);
             if (draft.isPresent()) {
                 alertsFired++;
