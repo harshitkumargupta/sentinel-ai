@@ -12,6 +12,7 @@ const NAV = [
   { to: '/alerts', label: 'Alerts', icon: '⚑' },
   { to: '/incidents', label: 'Incidents', icon: '✸' },
   { to: '/evaluation', label: 'Evaluation', icon: '✓' },
+  { to: '/log-sources', label: 'Log Sources', icon: '⇲', roles: ['ANALYST', 'ADMIN'] },
   { to: '/sites', label: 'Sites', icon: '⌂' },
   { to: '/admin', label: 'Admin', icon: '⚙', role: 'ADMIN' },
   { to: '/admin-risk', label: 'Admin Risk', icon: '⚖', role: 'ADMIN' },
@@ -35,7 +36,10 @@ export default function NavBar() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  const links = useMemo(() => NAV.filter((n) => !n.role || hasRole(n.role)), [hasRole]);
+  const links = useMemo(
+    () => NAV.filter((n) => (!n.role || hasRole(n.role)) && (!n.roles || hasRole(...n.roles))),
+    [hasRole],
+  );
 
   useEffect(() => {
     try { localStorage.setItem('sentinel.sidebarCollapsed', collapsed ? '1' : '0'); } catch { /* ignore */ }

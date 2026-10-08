@@ -5,6 +5,7 @@ import com.sentinelai.common.util.Hashing;
 import com.sentinelai.common.web.ApiResponse;
 import com.sentinelai.common.web.ApiResponse.ApiError;
 import com.sentinelai.site.domain.ApiKey;
+import com.sentinelai.site.domain.SiteStatus;
 import com.sentinelai.site.repository.ApiKeyRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -53,6 +54,10 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             unauthorized(response, "Invalid or revoked API key");
             return;
         }
+        if (key.getSite().getStatus() == SiteStatus.DISABLED) {
+            reject(response, HttpServletResponse.SC_FORBIDDEN, "LOG_SOURCE_DISABLED", "Log source is disabled");
+            return;
+        }
         key.setLastUsedAt(clock.instant());
         apiKeyRepository.save(key);
 
@@ -64,9 +69,12 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void unauthorized(HttpServletResponse response, String message) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        reject(response, HttpServletResponse.SC_UNAUTHORIZED, "INVALID_API_KEY", message);
+    }
+
+    private void reject(HttpServletResponse response, int status, String code, String message) throws IOException {
+        response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getWriter(),
-                ApiResponse.error(ApiError.of("INVALID_API_KEY", message)));
+        objectMapper.writeValue(response.getWriter(), ApiResponse.error(ApiError.of(code, message)));
     }
 }

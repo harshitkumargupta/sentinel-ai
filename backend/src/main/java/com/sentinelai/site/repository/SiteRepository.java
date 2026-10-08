@@ -10,4 +10,11 @@ import java.util.List;
 public interface SiteRepository extends JpaRepository<Site, Long> {
 
     List<Site> findByOrg_IdOrderByIdAsc(Long orgId);
+
+    /** Atomic counter bump for records a source sent that could not be parsed or accepted. */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+            "update Site s set s.parseErrorCount = s.parseErrorCount + :n where s.id = :id")
+    int addParseErrors(@org.springframework.data.repository.query.Param("id") Long id,
+                       @org.springframework.data.repository.query.Param("n") long n);
 }

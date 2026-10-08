@@ -106,7 +106,8 @@ public class SiteService {
         return new SnippetResponse(curl, node, spring);
     }
 
-    private ApiKeyResponse issueKey(Site site) {
+    /** Issue a new ingest key: the raw value is returned once; only its SHA-256 is stored. */
+    public ApiKeyResponse issueKey(Site site) {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         String raw = "sk_" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
