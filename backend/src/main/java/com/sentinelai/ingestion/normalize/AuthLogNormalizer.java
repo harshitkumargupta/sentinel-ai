@@ -11,7 +11,8 @@ import static com.sentinelai.ingestion.normalize.NormalizerSupport.text;
 import static com.sentinelai.ingestion.normalize.NormalizerSupport.timestamp;
 
 /**
- * Maps an auth-log line: {@code {username, sourceIp, success, userAgent, geoCountry, timestamp}}.
+ * Maps an auth-log line: {@code {username, sourceIp, success, userAgent, geoCountry, host, timestamp}};
+ * the host (when present) becomes the {@code host:<name>} entity key so endpoint actions can target it.
  * Failures become FAILED_LOGIN; successes become SUSPICIOUS_LOGIN candidates for geo/odd-hour rules.
  */
 @Component
@@ -35,6 +36,7 @@ public class AuthLogNormalizer implements EventNormalizer {
                 .userAgent(text(raw, "userAgent"))
                 .resource("auth/login")
                 .geoCountry(text(raw, "geoCountry"))
+                .entityKey(text(raw, "host") == null ? null : "host:" + text(raw, "host"))
                 .eventTimestamp(timestamp(raw, "timestamp"))
                 .clientEventId(text(raw, "clientEventId"))
                 .rawPayload(raw.toString())

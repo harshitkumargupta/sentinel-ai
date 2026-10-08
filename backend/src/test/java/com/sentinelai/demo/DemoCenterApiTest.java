@@ -87,6 +87,12 @@ class DemoCenterApiTest extends IntegrationTestSupport {
             assertThat(run.path("alertsCreated").asInt()).as(id + " alerts").isPositive();
             assertThat(run.path("incidentIds").size()).as(id + " incidents").isPositive();
             assertThat(run.path("rulesFired").toString()).as(id + " rule").contains(stage.path("expectedRule").asText());
+            if (id.equals("credential_stuffing")) {
+                // One attacker IP, many accounts → one offense keyed by the IP, not one per account.
+                assertThat(run.path("incidentIds").size()).as("stuffing correlates by IP").isEqualTo(1);
+                assertThat(incidentRepository.findById(run.path("incidentIds").get(0).asLong()).orElseThrow()
+                        .getCorrelationKey()).startsWith("ip:");
+            }
         }
 
         // Re-timed to "now": the newest generated event is within a minute of the current time.

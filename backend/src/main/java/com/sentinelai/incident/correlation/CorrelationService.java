@@ -188,6 +188,12 @@ public class CorrelationService implements Correlator {
     }
 
     private String deriveKey(SecurityEvent trigger, Alert alert) {
+        // IP-scoped detections (e.g. credential stuffing: one IP, many accounts) belong to the source
+        // IP, not to whichever account happened to trigger them.
+        String entity = alert.getEntityKey();
+        if (entity != null && (entity.startsWith("ip:") || entity.startsWith("SOURCE_IP:"))) {
+            return "ip:" + entity.substring(entity.indexOf(':') + 1);
+        }
         if (trigger != null) {
             if (trigger.getUsername() != null) {
                 return "user:" + trigger.getUsername();

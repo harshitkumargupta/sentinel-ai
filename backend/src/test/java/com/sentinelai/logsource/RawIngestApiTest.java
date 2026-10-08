@@ -59,6 +59,7 @@ class RawIngestApiTest extends IntegrationTestSupport {
                 .singleElement().satisfies(e -> {
                     assertThat(e.getUsername()).isEqualTo("alice");
                     assertThat(e.getRawPayload()).contains("rawMessage");
+                    assertThat(e.getEntityKey()).isEqualTo("host:web-01"); // enables Isolate Host
                 });
     }
 
