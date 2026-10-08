@@ -38,7 +38,7 @@ export default function SearchPage() {
   const [error, setError] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [saved, setSaved] = useState([]);
-  const [params] = useSearchParams();
+  const [urlParams] = useSearchParams();
 
   const loadSaved = useCallback(() => { listSavedSearches().then(setSaved).catch(() => {}); }, []);
   useEffect(() => { loadSaved(); }, [loadSaved]);
@@ -53,11 +53,11 @@ export default function SearchPage() {
 
   // Opened from a dashboard widget: /search?saved=<id>
   useEffect(() => {
-    const id = Number(params.get('saved'));
+    const id = Number(urlParams.get('saved'));
     const s = saved.find((x) => x.id === id);
     if (s) applySaved(s);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params, saved]);
+  }, [urlParams, saved]);
 
   async function saveCurrent() {
     const name = window.prompt('Name this search');
