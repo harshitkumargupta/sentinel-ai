@@ -3,6 +3,7 @@ import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
 import RuleEditor from '../components/RuleEditor.jsx';
+import RuleSandbox from '../components/RuleSandbox.jsx';
 import BuildingBlocksPanel from '../components/BuildingBlocksPanel.jsx';
 import { Tabs } from '../components/ui/index.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -34,6 +35,8 @@ export default function RulesPage() {
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);
   const [backtests, setBacktests] = useState({});
+  const [testing, setTesting] = useState(null);
+  const canTest = hasRole('ANALYST', 'ADMIN');
 
   const load = useCallback(async () => {
     try {
@@ -79,7 +82,7 @@ export default function RulesPage() {
       <table className="data-table">
         <thead>
           <tr><th>Rule</th><th>Type</th><th>Matches</th><th>Building blocks</th><th>Severity</th><th>MITRE</th>
-            <th>Enabled</th>{isAdmin && <th></th>}</tr>
+            <th>Enabled</th>{(isAdmin || canTest) && <th></th>}</tr>
         </thead>
         <tbody>
           {(rules ?? []).map((r) => {
@@ -96,14 +99,26 @@ export default function RulesPage() {
                   <td>{isAdmin
                     ? <button className="ghost" onClick={() => toggle(r)} aria-pressed={r.enabled}>{r.enabled ? 'On' : 'Off'}</button>
                     : (r.enabled ? 'On' : 'Off')}</td>
+                  {!isAdmin && canTest && (
+                    <td><button className="ghost" onClick={() => setTesting(testing === r.id ? null : r.id)}>Test</button></td>
+                  )}
                   {isAdmin && (
                     <td>
+                      <button className="ghost" onClick={() => setTesting(testing === r.id ? null : r.id)}>Test</button>
                       <button className="ghost" onClick={() => setEditing(editing === r.id ? null : r.id)}>Edit</button>
                       <button className="ghost" onClick={() => backtest(r)}>Backtest</button>
                       {backtests[r.id] && <div className="muted small">{backtests[r.id]}</div>}
                     </td>
                   )}
                 </tr>
+                {testing === r.id && (
+                  <tr>
+                    <td colSpan={8}>
+                      <RuleSandbox rule={r} canSave={isAdmin} onClose={() => setTesting(null)}
+                        onSaved={() => { setTesting(null); load(); }} />
+                    </td>
+                  </tr>
+                )}
                 {editing === r.id && (
                   <tr>
                     <td colSpan={8}>

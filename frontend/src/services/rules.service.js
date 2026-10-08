@@ -53,3 +53,13 @@ export async function updateBuildingBlock(id, body) {
 export async function deleteBuildingBlock(id) {
   await api.delete(`/building-blocks/${id}`);
 }
+
+export async function sandboxRule(id, body) {
+  const { data } = await api.post(`/rules/${id}/sandbox`, body);
+  return data.data;
+}
+
+export async function createRule(body) {
+  const { data } = await api.post('/rules', body);
+  return data.data;
+}
