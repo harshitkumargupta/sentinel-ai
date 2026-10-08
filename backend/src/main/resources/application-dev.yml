@@ -25,6 +25,10 @@ sentinel:
   simulator:
     enabled: true
     default-intensity: 5
+  demo:
+    # Demo Center + quick-login for the documented dev accounts.
+    enabled: true
+    quick-login: true
   redis:
     enabled: ${REDIS_ENABLED:true}
   kafka:

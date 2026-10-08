@@ -65,6 +65,13 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ApiError.of("NOT_FOUND", ex.getMessage()));
     }
 
+    /** Unmapped path (e.g. a feature-flagged controller that is off): 404 in the standard body. */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleNoResource(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return build(HttpStatus.NOT_FOUND, ApiError.of("NOT_FOUND", "No such endpoint"));
+    }
+
     @ExceptionHandler({ConflictException.class, DataIntegrityViolationException.class})
     public ResponseEntity<ApiResponse<Object>> handleConflict(Exception ex) {
         return build(HttpStatus.CONFLICT, ApiError.of("CONFLICT", "The request conflicts with existing data"));

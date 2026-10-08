@@ -1,0 +1,52 @@
+# SentinelAI :: "demo" profile — a self-contained, keyless, offline demo.
+#
+# Seeds demo users (admin/analyst/viewer) and all built-in rules, enables the simulator + Demo Center,
+# quick-login buttons on the login page, and the offline 'local' AI engine. Kafka and Redis are off
+# (synchronous pipeline, in-memory fallbacks). NEVER use this profile for an instance with real users:
+# the demo credentials are public and the login page lists them.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/sentinelai?createDatabaseIfNotExist=true&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USER:sentinel}
+    password: ${DB_PASSWORD:sentinel}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    database-platform: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+sentinel:
+  jwt:
+    # DEMO ONLY default secret (>= 32 chars) so the demo starts with no .env. Override with JWT_SECRET.
+    secret: ${JWT_SECRET:demo-only-sentinel-ai-secret-key-not-for-production-0123456789}
+  security:
+    web:
+      cors:
+        allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8088,http://localhost:5173}
+  demo:
+    enabled: true
+    quick-login: true
+    baseline-events: 240
+  simulator:
+    enabled: true
+    default-intensity: 5
+  redis:
+    enabled: ${REDIS_ENABLED:false}
+  kafka:
+    enabled: ${KAFKA_ENABLED:false}
+  ai:
+    enabled: true
+    provider: local
+  playbook:
+    # One presenter runs the whole response flow; ADMIN role + admin-risk guard still apply.
+    require-distinct-approver: false
+
+logging:
+  level:
+    com.sentinelai: INFO

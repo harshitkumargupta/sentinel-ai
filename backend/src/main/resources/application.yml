@@ -99,6 +99,10 @@ sentinel:
       ai-investigation: sentinel-ai-investigation
   rate-limit:
     enabled: true
+  demo:
+    # Demo Center (admin buttons over the simulator) and login-page quick-login. Off outside dev/demo.
+    enabled: ${DEMO_ENABLED:false}
+    quick-login: false
   playbook:
     expiry-minutes: ${PLAYBOOK_EXPIRY_MINUTES:30}
     adapter-timeout-ms: 2000

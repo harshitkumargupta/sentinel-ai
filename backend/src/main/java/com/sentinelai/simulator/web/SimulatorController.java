@@ -37,7 +37,7 @@ public class SimulatorController {
         SimulatorRunRequest req = request != null ? request : new SimulatorRunRequest(null, null, null);
         long seed = req.seed() != null ? req.seed() : 42L;
         int intensity = req.intensity() != null ? req.intensity() : properties.getDefaultIntensity();
-        var run = simulatorService.run(actor.getOrgId(), req.scenarios(), seed, intensity);
+        var run = simulatorService.run(actor.getOrgId(), req.scenarios(), seed, intensity, req.timeAnchor());
         return ApiResponse.ok(SimulatorRunResponse.from(run));
     }
 
