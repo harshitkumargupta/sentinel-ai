@@ -153,7 +153,7 @@
 .shell-sidebar--collapsed { width: var(--sidebar-w-collapsed); }
 body:has(.shell-sidebar--collapsed) .app-shell { padding-left: var(--sidebar-w-collapsed); }
 .shell-brand { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2); margin-bottom: var(--sp-3); }
-.shell-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.shell-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; min-height: 0; }
 .shell-navlink {
   position: relative; display: flex; align-items: center; gap: var(--sp-3); padding: 0.55rem 0.6rem;
   border-radius: var(--radius-sm); color: var(--muted); text-decoration: none; font-size: var(--fs-sm);
@@ -341,3 +341,12 @@ body:has(.shell-sidebar--collapsed) .shell-topbar { left: var(--sidebar-w-collap
 @media (max-width: 640px) {
   .scenario-grid { grid-template-columns: 1fr; }
 }
+
+/* Sidebar groups (Monitor / Investigate / Respond / Configure / Insights / Admin) */
+.shell-navgroup { display: flex; flex-direction: column; gap: 2px; }
+.shell-navgroup + .shell-navgroup { margin-top: var(--sp-2, 8px); }
+.shell-navgroup__title {
+  font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); padding: 4px 10px 2px; opacity: 0.8;
+}
+.shell-navgroup__rule { border: 0; border-top: 1px solid var(--border, #30363d); margin: 4px 8px; }

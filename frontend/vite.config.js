@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Built files go to /static/ — "/assets" is an app route (Assets page), so it must not be a folder.
+  build: { assetsDir: 'static' },
   plugins: [react()],
   server: {
     port: 5173,

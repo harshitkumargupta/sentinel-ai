@@ -116,7 +116,7 @@ public class SiteService {
         return new ApiKeyResponse(key.getId(), site.getId(), raw, key.getScope());
     }
 
-    private Site requireAccessibleSite(AppUserPrincipal actor, Long siteId) {
+    public Site requireAccessibleSite(AppUserPrincipal actor, Long siteId) {
         Site site = siteRepository.findById(siteId)
                 .filter(s -> s.getOrg().getId().equals(actor.getOrgId()))
                 .orElseThrow(() -> new NotFoundException("Site not found: " + siteId));

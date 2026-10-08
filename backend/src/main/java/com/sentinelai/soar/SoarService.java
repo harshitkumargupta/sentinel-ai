@@ -14,7 +14,6 @@ import com.sentinelai.incident.domain.IncidentAlert;
 import com.sentinelai.incident.repository.IncidentAlertRepository;
 import com.sentinelai.incident.repository.IncidentRepository;
 import com.sentinelai.notification.channel.IncidentNotificationEvent;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
@@ -31,7 +30,6 @@ import java.util.stream.Collectors;
 /** Playbook CRUD, manual runs, matching, run history, and auto-runs for new incidents. */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SoarService {
 
     private final SoarPlaybookRepository playbooks;
@@ -41,8 +39,20 @@ public class SoarService {
     private final IncidentAlertRepository incidentAlerts;
     private final AuditService audit;
     private final ObjectMapper objectMapper;
-    @Qualifier("notificationExecutor")
     private final Executor background;
+
+    public SoarService(SoarPlaybookRepository playbooks, SoarRunRepository runs, SoarExecutor executor,
+                       IncidentRepository incidents, IncidentAlertRepository incidentAlerts, AuditService audit,
+                       ObjectMapper objectMapper, @Qualifier("notificationExecutor") Executor background) {
+        this.playbooks = playbooks;
+        this.runs = runs;
+        this.executor = executor;
+        this.incidents = incidents;
+        this.incidentAlerts = incidentAlerts;
+        this.audit = audit;
+        this.objectMapper = objectMapper;
+        this.background = background;
+    }
 
     public record PlaybookView(Long id, String name, String description, String triggerRuleType,
                                Severity triggerMinSeverity, List<PlaybookStep> steps, boolean enabled, boolean autoRun) {

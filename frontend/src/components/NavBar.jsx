@@ -9,29 +9,46 @@ import AiModeBadge from './AiModeBadge.jsx';
 import NotificationBell from './NotificationBell.jsx';
 import { getDemoInfo } from '../services/demo.service.js';
 
+const A = ['ANALYST', 'ADMIN'];
+// Grouped sidebar. `roles` = any of; `role` = exactly that role (via hasRole); demoOnly = demo profile only.
 const NAV = [
-  { to: '/dashboard', label: 'Dashboard', icon: '▦' },
-  { to: '/executive', label: 'Executive', icon: '◔' },
-  { to: '/events', label: 'Events', icon: '≋' },
-  { to: '/search', label: 'Event Search', icon: '⌕' },
-  { to: '/alerts', label: 'Alerts', icon: '⚑' },
-  { to: '/offenses', label: 'Offenses', icon: '✸' },
-  { to: '/incidents', label: 'Incidents', icon: '☰' },
-  { to: '/assets', label: 'Assets', icon: '▣' },
-  { to: '/playbooks', label: 'Playbooks', icon: '⚡' },
-  { to: '/honeytokens', label: 'Honeytokens', icon: '◎', roles: ['ANALYST', 'ADMIN'] },
-  { to: '/coverage', label: 'Coverage', icon: '▦', roles: ['ANALYST', 'ADMIN'] },
-  { to: '/reports', label: 'Reports', icon: '▤', roles: ['ANALYST', 'ADMIN'] },
-  { to: '/evaluation', label: 'Evaluation', icon: '✓' },
-  { to: '/rules', label: 'Rules', icon: '⚙︎' },
-  { to: '/reference-sets', label: 'Reference Sets', icon: '☷' },
-  { to: '/log-sources', label: 'Log Sources', icon: '⇲', roles: ['ANALYST', 'ADMIN'] },
-  { to: '/sites', label: 'Sites', icon: '⌂' },
-  { to: '/demo-center', label: 'Demo Center', icon: '▶', role: 'ADMIN', demoOnly: true },
-  { to: '/notifications', label: 'Notifications', icon: '✉', role: 'ADMIN' },
-  { to: '/admin', label: 'Admin', icon: '⚙', role: 'ADMIN' },
-  { to: '/admin-risk', label: 'Admin Risk', icon: '⚖', role: 'ADMIN' },
-  { to: '/pipeline', label: 'Pipeline', icon: '⇄', role: 'ADMIN' },
+  { group: 'Monitor', items: [
+    { to: '/dashboard', label: 'Dashboard', icon: '▦' },
+    { to: '/events', label: 'Events', icon: '≋' },
+    { to: '/alerts', label: 'Alerts', icon: '⚑' },
+    { to: '/offenses', label: 'Offenses', icon: '✸' },
+  ] },
+  { group: 'Investigate', items: [
+    { to: '/incidents', label: 'Incidents / Cases', icon: '☰' },
+    { to: '/search', label: 'Event Search', icon: '⌕' },
+    { to: '/assets', label: 'Assets', icon: '▣' },
+    { to: '/vulnerabilities', label: 'Vulnerabilities', icon: '⚠' },
+    { to: '/reference-sets', label: 'Reference Sets', icon: '☷' },
+  ] },
+  { group: 'Respond', items: [
+    { to: '/playbooks', label: 'Playbooks', icon: '⚡' },
+    { to: '/honeytokens', label: 'Honeytokens', icon: '◎', roles: A },
+    { to: '/notifications', label: 'Notifications', icon: '✉', role: 'ADMIN' },
+  ] },
+  { group: 'Configure', items: [
+    { to: '/connect-website', label: 'Connect Website', icon: '⊕', role: 'ADMIN' },
+    { to: '/sites', label: 'Sites', icon: '⌂' },
+    { to: '/log-sources', label: 'Log Sources · Upload', icon: '⇲', roles: A },
+    { to: '/rules', label: 'Rules', icon: '⚙︎' },
+  ] },
+  { group: 'Insights', items: [
+    { to: '/executive', label: 'Executive', icon: '◔' },
+    { to: '/coverage', label: 'Coverage', icon: '▤', roles: A },
+    { to: '/reports', label: 'Reports', icon: '▤', roles: A },
+    { to: '/evaluation', label: 'Evaluation', icon: '✓' },
+  ] },
+  { group: 'Admin', items: [
+    { to: '/demo-center', label: 'Demo Center', icon: '▶', role: 'ADMIN', demoOnly: true },
+    { to: '/audit', label: 'Audit Log', icon: '⛓', role: 'ADMIN' },
+    { to: '/admin', label: 'Users & Settings', icon: '⚙', role: 'ADMIN' },
+    { to: '/admin-risk', label: 'Risk Weights', icon: '⚖', role: 'ADMIN' },
+    { to: '/pipeline', label: 'Pipeline', icon: '⇄', role: 'ADMIN' },
+  ] },
 ];
 
 function readCollapsed() {
@@ -53,11 +70,15 @@ export default function NavBar() {
 
   const [demoMode, setDemoMode] = useState(false);
   useEffect(() => { getDemoInfo().then((i) => setDemoMode(Boolean(i.demoMode))).catch(() => {}); }, []);
-  const links = useMemo(
-    () => NAV.filter((n) => (!n.role || hasRole(n.role)) && (!n.roles || hasRole(...n.roles))
-      && (!n.demoOnly || demoMode)),
+  const groups = useMemo(
+    () => NAV.map((g) => ({
+      group: g.group,
+      items: g.items.filter((n) => (!n.role || hasRole(n.role)) && (!n.roles || hasRole(...n.roles))
+        && (!n.demoOnly || demoMode)),
+    })).filter((g) => g.items.length > 0),
     [hasRole, demoMode],
   );
+  const links = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 
   useEffect(() => {
     try { localStorage.setItem('sentinel.sidebarCollapsed', collapsed ? '1' : '0'); } catch { /* ignore */ }
@@ -87,7 +108,11 @@ export default function NavBar() {
           {!collapsed && <span className="brand">SentinelAI</span>}
         </div>
         <nav className="shell-nav">
-          {links.map((n) => (
+          {groups.map((g) => (
+            <div key={g.group} className="shell-navgroup" role="group" aria-label={g.group}>
+              {collapsed ? <hr className="shell-navgroup__rule" aria-hidden="true" />
+                : <div className="shell-navgroup__title">{g.group}</div>}
+          {g.items.map((n) => (
             <NavLink key={n.to} to={n.to} className="shell-navlink" title={n.label}>
               {({ isActive }) => (
                 <>
@@ -100,6 +125,8 @@ export default function NavBar() {
                 </>
               )}
             </NavLink>
+          ))}
+            </div>
           ))}
         </nav>
         <button className="shell-collapse" onClick={() => setCollapsed((c) => !c)}

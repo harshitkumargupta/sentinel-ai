@@ -84,7 +84,7 @@ public class IngestEventsController {
                 continue;
             }
             try {
-                IngestOutcome outcome = ingestionService.ingest(source.orgId(), source.siteId(), "generic", payload, null);
+                IngestOutcome outcome = ingestionService.ingest(source.orgId(), source.siteId(), sourceTypeOf(payload), payload, null);
                 ids.add(outcome.eventId());
                 if (outcome.duplicate()) {
                     duplicates++;
@@ -98,6 +98,17 @@ public class IngestEventsController {
         logSourceService.recordParseErrors(source.siteId(), errors.size());
         return ApiResponse.ok(new IngestEventsResponse(accepted, duplicates, errors.size(), ids,
                 errors.stream().limit(MAX_ERRORS_REPORTED).toList()));
+    }
+
+    /**
+     * A web request (from the middleware snippets: method/path/status, no eventType) goes through the
+     * web normalizer so failed logins, SQLi and probe paths are classified; anything else is generic.
+     */
+    static String sourceTypeOf(JsonNode payload) {
+        if (payload.hasNonNull("eventType")) {
+            return "generic";
+        }
+        return payload.hasNonNull("path") || payload.hasNonNull("method") ? "web" : "generic";
     }
 
     private static List<JsonNode> elements(JsonNode body) {

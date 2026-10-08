@@ -268,3 +268,44 @@ Each row gives the page, what to click, what appears, and **one sentence for the
 - **Blast radius** counts SentinelAI sessions (refresh tokens) and users/hosts seen in stored events. It is not a live directory or EDR lookup. The actions remain simulated adapters.
 - **MTTD** = incident creation − earliest linked event; **MTTR** uses resolved/closed time. Both are only as accurate as event timestamps. Penalty weights are fixed in code (documented above), not yet admin-editable.
 - **The plain-language summary and NL search are templates and rules**, not an LLM. Phrasing it doesn't recognise is reported as not understood, so nothing is silently guessed.
+
+## 7. Demo with my own website
+
+Only connect a site **you own or are authorized to monitor**. SentinelAI never sends attack traffic. The
+"test traffic" commands are for **you** to run against **your** site.
+
+**Steps**
+1. Log in as an admin → **Configure → Connect Website** (`/connect-website`).
+2. Enter the site name and URL, choose how data arrives, and tick **"I own or am authorized to test this site"** → **Connect and create API key**. The attestation is recorded in the **Audit Log** (`SITE_CONNECT`).
+3. **Copy the API key now.** It is shown once and stored only as a SHA-256 hash; you can rotate it on **Sites**. If the site runs on another machine, set *SentinelAI URL* to this computer's LAN address (e.g. `http://192.168.1.20:8088`).
+4. Install one method. The page fills in your URL and key:
+
+   | Method | What you do | What SentinelAI receives |
+   |---|---|---|
+   | **Agent on server** | Copy `agent/sentinel_agent.py` to the server and run the shown command (Python 3, no packages) | New access-log lines → `/api/ingest/raw` |
+   | **Log file upload** | **Log Sources → Upload**, format `ACCESS_LOG` | The file's lines |
+   | **App middleware** | Paste the **Node/Express**, **Spring Boot filter**, **Flask** or **Django** snippet | One JSON event per request (time, IP, method, path, status, user agent, and the username on login posts) → `/api/ingest/events` |
+   | **Website monitor** | **Check now** | One plain GET of your URL (5 s timeout, no redirects) recorded as an up/down event with latency |
+5. Run the **curl test**, then click **Test connection**. It polls for up to 2 minutes and shows **Connected**, the event count, the last receive time and the last event.
+6. **Generate test traffic against my site** (you run these against your own site):
+   - 12 wrong logins → `FAILED_LOGIN` events → **Brute force** alert (10 in 5 min per username). Your login must return 401/403 and post a `username` field.
+   - `/admin`, `/.env`, `/wp-login.php`, `/.git/config`, `/phpmyadmin` → `ABNORMAL_ACCESS` events → **Abnormal access** alerts.
+   - Three requests with `' OR '1'='1` in a query parameter → `SQL_INJECTION` events → **SQL injection** alert (3 in 5 min per IP).
+
+**What appears where**
+- **Sites**: the site shows *verified ✓* and its last event time.
+- **Events / Event Search**: the requests (search e.g. by your test IP or event type).
+- **Alerts**: Brute force, Abnormal access and SQL injection.
+- **Offenses**: one offense for your test IP (events from the same IP correlate). Open it, then its incident page (**Incidents**) for the case timeline, the **attack graph** (IP → user) and the risk breakdown.
+- **Executive**: the posture score drops while the offense is open.
+- **Audit Log**: `SITE_CONNECT` with the authorization attestation.
+
+**How to explain it:** "My website forwards each request (or its log) to SentinelAI with a per-site key. SentinelAI
+classifies requests as failed logins, injection attempts or probes for sensitive files. Its rules turn bursts of those
+into alerts, and alerts from the same attacker are grouped into one offense that an analyst can investigate and respond to."
+
+**Partial / limits**
+- Classification is pattern-based (login path + 401/403, quote and `UNION SELECT`/`OR 1=1` markers, a list of commonly probed paths). Signed-in users (a `username` is present) visiting `/admin` are not flagged.
+- The monitor check runs only when clicked (no schedule). Inside the Docker demo, `localhost` means the backend container; use your LAN IP or `host.docker.internal` for a site on your computer.
+- Sites are per-user scoped: other users see a connected site only after an admin grants access.
+- Ingest is rate-limited per API key. A burst beyond the limit gets HTTP 429, and the snippets drop events silently so your site is never affected.

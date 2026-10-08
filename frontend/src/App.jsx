@@ -28,6 +28,9 @@ const PlaybooksPage = lazy(() => import('./pages/PlaybooksPage.jsx'));
 const HoneytokensPage = lazy(() => import('./pages/HoneytokensPage.jsx'));
 const CoveragePage = lazy(() => import('./pages/CoveragePage.jsx'));
 const ExecutivePage = lazy(() => import('./pages/ExecutivePage.jsx'));
+const ConnectWebsitePage = lazy(() => import('./pages/ConnectWebsitePage.jsx'));
+const VulnerabilitiesPage = lazy(() => import('./pages/VulnerabilitiesPage.jsx'));
+const AuditPage = lazy(() => import('./pages/AuditPage.jsx'));
 const ReferenceSetsPage = lazy(() => import('./pages/ReferenceSetsPage.jsx'));
 
 const admin = (el) => <ProtectedRoute roles={['ADMIN']}>{el}</ProtectedRoute>;
@@ -43,6 +46,8 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/executive" element={<ExecutivePage />} />
+        <Route path="/connect-website" element={admin(<ConnectWebsitePage />)} />
+        <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/incidents" element={<IncidentsPage />} />
@@ -64,6 +69,7 @@ export default function App() {
         <Route path="/demo-center" element={admin(<DemoCenterPage />)} />
         <Route path="/admin" element={admin(<AdminPage />)} />
         <Route path="/admin-risk" element={admin(<AdminRiskPage />)} />
+        <Route path="/audit" element={admin(<AuditPage />)} />
         <Route path="/pipeline" element={admin(<PipelinePage />)} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
