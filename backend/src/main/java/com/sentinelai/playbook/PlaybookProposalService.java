@@ -63,11 +63,21 @@ public class PlaybookProposalService {
     @Transactional
     public PlaybookActionResponse propose(Long incidentId, ProposeActionRequest req, AppUserPrincipal actor) {
         Incident incident = load(incidentId, actor);
-        String type = PlaybookService.actionTypeFor(req.actionType().trim());
+        return propose(incident, req.actionType(), req.target(), req.reason(), actor.getUserId(), actor.getUsername());
+    }
+
+    /**
+     * Propose for an incident on behalf of a user or (userId null) an automation such as a SOAR
+     * playbook. Same validation, idempotency, audit and timeline either way; approval stays human.
+     */
+    @Transactional
+    public PlaybookActionResponse propose(Incident incident, String actionType, String rawTarget, String reason,
+                                         Long userId, String actorName) {
+        String type = PlaybookService.actionTypeFor(actionType.trim());
         if (!playbookService.supports(type) || !props.isAllowed(type)) {
             throw new BadRequestException("Unsupported or non-allow-listed action type: " + type);
         }
-        String target = req.target().trim();
+        String target = rawTarget.trim();
         ActionTargets targets = targetsOf(incident);
         if (!targets.ips().contains(target) && !targets.users().contains(target) && !targets.hosts().contains(target)) {
             throw new BadRequestException("Target is not part of this incident's evidence: " + target);
@@ -83,20 +93,28 @@ public class PlaybookProposalService {
 
         PlaybookAction action = repository.save(PlaybookAction.builder()
                 .incident(incident)
-                .proposedBy(userRepository.getReferenceById(actor.getUserId()))
+                .proposedBy(userId == null ? null : userRepository.getReferenceById(userId))
                 .actionType(type)
                 .targetRef(target)
-                .reason(req.reason() == null || req.reason().isBlank()
-                        ? "Proposed by " + actor.getUsername() + " from the incident page" : req.reason().trim())
+                .reason(reason == null || reason.isBlank()
+                        ? "Proposed by " + actorName + " from the incident page" : reason.trim())
                 .riskLevel(incident.getSeverity())
                 .expiresAt(clock.instant().plus(props.getExpiryMinutes(), ChronoUnit.MINUTES))
                 .status(PlaybookActionStatus.PROPOSED)
                 .build());
-        auditService.record(actor.getOrgId(), actor.getUserId(), "PLAYBOOK_PROPOSE", "playbook_action",
-                action.getId(), "{\"action\":\"" + type + "\",\"target\":\"" + escape(target) + "\"}", null);
-        timeline.record(incident.getId(), "ACTION_PROPOSED", actor.getUsername(),
+        auditService.record(incident.getOrg().getId(), userId, "PLAYBOOK_PROPOSE", "playbook_action",
+                action.getId(), "{\"action\":\"" + type + "\",\"target\":\"" + escape(target) + "\",\"by\":\""
+                        + escape(actorName) + "\"}", null);
+        timeline.record(incident.getId(), "ACTION_PROPOSED", actorName,
                 "{\"action\":\"" + type + "\",\"target\":\"" + escape(target) + "\"}");
         return playbookService.toResponse(action);
+    }
+
+    /** Evidence targets of an incident (IPs, users, hosts) — for automations. */
+    @Transactional(readOnly = true)
+    public ActionTargets targetsOf(Long incidentId) {
+        return targetsOf(incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new NotFoundException("Incident not found: " + incidentId)));
     }
 
     private ActionTargets targetsOf(Incident incident) {

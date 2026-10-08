@@ -17,6 +17,7 @@ const NAV = [
   { to: '/offenses', label: 'Offenses', icon: '✸' },
   { to: '/incidents', label: 'Incidents', icon: '☰' },
   { to: '/assets', label: 'Assets', icon: '▣' },
+  { to: '/playbooks', label: 'Playbooks', icon: '⚡' },
   { to: '/reports', label: 'Reports', icon: '▤', roles: ['ANALYST', 'ADMIN'] },
   { to: '/evaluation', label: 'Evaluation', icon: '✓' },
   { to: '/rules', label: 'Rules', icon: '⚙︎' },

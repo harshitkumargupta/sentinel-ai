@@ -15,6 +15,7 @@ import OffenseCasePanel from '../components/OffenseCasePanel.jsx';
 import { getOffense } from '../services/offenses.service.js';
 import CaseTimeline from '../components/CaseTimeline.jsx';
 import AffectedAssetsPanel from '../components/AffectedAssetsPanel.jsx';
+import RunPlaybookPanel from '../components/RunPlaybookPanel.jsx';
 import { NEXT_STATUS, statusLabel } from '../services/caseLabels.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
@@ -105,6 +106,8 @@ export default function IncidentDetailPage() {
               )}
 
               <AskAiPanel incidentId={id} onHighlight={setHighlighted} />
+
+              <RunPlaybookPanel incidentId={id} canRun={canTriage} onRan={load} />
 
               {canTriage && <ActionsPanel incidentId={id} canAct={canTriage} />}
 
