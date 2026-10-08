@@ -15,9 +15,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -66,6 +68,22 @@ public class OffenseController {
     @GetMapping("/{id}/notes")
     public ApiResponse<List<NoteView>> notes(@PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal actor) {
         return ApiResponse.ok(service.notes(id, actor));
+    }
+
+    @PutMapping("/{id}/notes/{noteId}")
+    @PreAuthorize("hasAnyRole('ANALYST','ADMIN')")
+    public ApiResponse<NoteView> editNote(@PathVariable Long id, @PathVariable Long noteId,
+                                          @Valid @RequestBody AddNoteRequest request,
+                                          @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(service.editNote(id, noteId, request.body(), actor));
+    }
+
+    @DeleteMapping("/{id}/notes/{noteId}")
+    @PreAuthorize("hasAnyRole('ANALYST','ADMIN')")
+    public ApiResponse<Void> deleteNote(@PathVariable Long id, @PathVariable Long noteId,
+                                        @AuthenticationPrincipal AppUserPrincipal actor) {
+        service.deleteNote(id, noteId, actor);
+        return ApiResponse.ok(null);
     }
 
     @PostMapping("/{id}/notes")

@@ -28,9 +28,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -63,6 +65,7 @@ public class OffenseService {
     private final ObjectProvider<ThreatIntelSignal> threatIntel;
     private final AuditService auditService;
     private final TimelineService timeline;
+    private final Clock clock;
 
     public enum SortBy { MAGNITUDE, RECENT }
 
@@ -124,7 +127,43 @@ public class OffenseService {
         auditService.record(actor.getOrgId(), actor.getUserId(), "OFFENSE_NOTE_ADD", "incident", id,
                 "{\"noteId\":" + note.getId() + "}", null);
         timeline.record(id, "NOTE_ADDED", actor.getUsername(), "{\"noteId\":" + note.getId() + "}");
-        return new NoteView(note.getId(), actor.getUsername(), note.getBody(), note.getCreatedAt());
+        return new NoteView(note.getId(), actor.getUsername(), actor.getUserId(), note.getBody(),
+                note.getCreatedAt(), null, null);
+    }
+
+    /** Edit a note: its author or an admin. */
+    @Transactional
+    public NoteView editNote(Long id, Long noteId, String body, AppUserPrincipal actor) {
+        IncidentNote note = ownNote(id, noteId, actor);
+        note.setBody(clean(body));
+        note.setUpdatedAt(Instant.now(clock));
+        note.setEditedBy(userRepository.getReferenceById(actor.getUserId()));
+        noteRepository.save(note);
+        auditService.record(actor.getOrgId(), actor.getUserId(), "OFFENSE_NOTE_EDIT", "incident", id,
+                "{\"noteId\":" + noteId + "}", null);
+        timeline.record(id, "NOTE_EDITED", actor.getUsername(), "{\"noteId\":" + noteId + "}");
+        return view(note);
+    }
+
+    /** Delete a note: its author or an admin. The audit log keeps the record of the deletion. */
+    @Transactional
+    public void deleteNote(Long id, Long noteId, AppUserPrincipal actor) {
+        IncidentNote note = ownNote(id, noteId, actor);
+        noteRepository.delete(note);
+        auditService.record(actor.getOrgId(), actor.getUserId(), "OFFENSE_NOTE_DELETE", "incident", id,
+                "{\"noteId\":" + noteId + "}", null);
+        timeline.record(id, "NOTE_DELETED", actor.getUsername(), "{\"noteId\":" + noteId + "}");
+    }
+
+    private IncidentNote ownNote(Long id, Long noteId, AppUserPrincipal actor) {
+        incident(id, actor);
+        IncidentNote note = noteRepository.findById(noteId).filter(n -> n.getIncident().getId().equals(id))
+                .orElseThrow(() -> new NotFoundException("Note not found: " + noteId));
+        boolean author = note.getAuthor() != null && note.getAuthor().getId().equals(actor.getUserId());
+        if (!author && actor.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only the note's author or an admin can change it");
+        }
+        return note;
     }
 
     /** Users an offense can be assigned to: enabled analysts and admins of the org. */
@@ -204,7 +243,8 @@ public class OffenseService {
 
     private static NoteView view(IncidentNote n) {
         return new NoteView(n.getId(), n.getAuthor() == null ? "deleted user" : n.getAuthor().getUsername(),
-                n.getBody(), n.getCreatedAt());
+                n.getAuthor() == null ? null : n.getAuthor().getId(), n.getBody(), n.getCreatedAt(),
+                n.getUpdatedAt(), n.getEditedBy() == null ? null : n.getEditedBy().getUsername());
     }
 
     /** Strip control characters (keeping newlines/tabs) and trim; length is capped by the DTO. */

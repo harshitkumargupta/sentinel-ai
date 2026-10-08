@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -40,10 +41,21 @@ public class IncidentNote {
     @JoinColumn(name = "author_id")
     private User author;
 
+    @Setter
     @Column(nullable = false, length = 2000)
     private String body;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    /** Set when the note is edited (null = never edited). */
+    @Setter
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @Setter
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "edited_by")
+    private User editedBy;
 }

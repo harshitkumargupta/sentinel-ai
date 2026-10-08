@@ -29,7 +29,8 @@ public final class OffenseDtos {
     public record OffensePage(List<OffenseSummary> content, int page, int size, long totalElements, int totalPages) {
     }
 
-    public record NoteView(Long id, String author, String body, Instant createdAt) {
+    public record NoteView(Long id, String author, Long authorId, String body, Instant createdAt,
+                           Instant updatedAt, String editedBy) {
     }
 
     public record AddNoteRequest(@NotBlank @Size(max = 2000) String body) {

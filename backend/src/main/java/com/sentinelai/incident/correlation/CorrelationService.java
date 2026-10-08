@@ -12,6 +12,7 @@ import com.sentinelai.incident.domain.IncidentAlert;
 import com.sentinelai.incident.domain.IncidentEvent;
 import com.sentinelai.incident.domain.IncidentEventId;
 import com.sentinelai.incident.domain.IncidentFeedback;
+import com.sentinelai.incident.domain.IncidentPriority;
 import com.sentinelai.incident.domain.IncidentStatus;
 import com.sentinelai.incident.repository.IncidentAlertRepository;
 import com.sentinelai.incident.repository.IncidentEventRepository;
@@ -113,6 +114,7 @@ public class CorrelationService implements Correlator {
                     .title(truncate(alert.getMessage()))
                     .status(IncidentStatus.OPEN)
                     .severity(alert.getSeverity())
+                    .priority(IncidentPriority.fromSeverity(alert.getSeverity()))
                     .feedback(IncidentFeedback.UNREVIEWED)
                     .correlationKey(key)
                     .riskScore(0)

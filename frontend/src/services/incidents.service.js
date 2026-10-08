@@ -49,3 +49,13 @@ export async function getSimilar(id, limit = 5) {
   const { data } = await api.get(`/incidents/${id}/similar`, { params: { limit } });
   return data.data;
 }
+
+export async function setPriority(id, priority) {
+  const { data } = await api.patch(`/incidents/${id}/priority`, { priority });
+  return data.data;
+}
+
+export async function getCaseTimeline(id) {
+  const { data } = await api.get(`/incidents/${id}/case-timeline`);
+  return data.data; // [{ at, kind, actor, title, detail }]
+}

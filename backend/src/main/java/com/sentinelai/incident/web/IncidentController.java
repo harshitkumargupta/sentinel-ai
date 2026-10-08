@@ -4,6 +4,9 @@ import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.domain.Severity;
 import com.sentinelai.common.web.ApiResponse;
 import com.sentinelai.common.web.PageResponse;
+import com.sentinelai.graph.GraphDtos.GraphResponse;
+import com.sentinelai.graph.GraphService;
+import com.sentinelai.incident.domain.IncidentPriority;
 import com.sentinelai.incident.domain.IncidentStatus;
 import com.sentinelai.incident.dto.AssignRequest;
 import com.sentinelai.incident.dto.EvidenceResponse;
@@ -13,13 +16,11 @@ import com.sentinelai.incident.dto.RiskResponse;
 import com.sentinelai.incident.dto.TimelineEntryResponse;
 import com.sentinelai.incident.dto.UpdateFeedbackRequest;
 import com.sentinelai.incident.dto.UpdateStatusRequest;
-
-import java.util.List;
 import com.sentinelai.incident.service.IncidentService;
-import com.sentinelai.graph.GraphDtos.GraphResponse;
-import com.sentinelai.graph.GraphService;
+import com.sentinelai.offense.CaseTimelineService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -33,6 +34,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/incidents")
 @RequiredArgsConstructor
@@ -40,6 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class IncidentController {
 
     private final IncidentService incidentService;
+    private final CaseTimelineService caseTimelineService;
     private final GraphService graphService;
 
     @GetMapping
@@ -47,11 +51,33 @@ public class IncidentController {
             @AuthenticationPrincipal AppUserPrincipal actor,
             @RequestParam(required = false) IncidentStatus status,
             @RequestParam(required = false) Severity severity,
+            @RequestParam(required = false) IncidentPriority priority,
+            @RequestParam(required = false) Long assigneeId,
+            @RequestParam(defaultValue = "false") boolean unassigned,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         var pageable = PageRequest.of(page, Math.min(size, 200), Sort.by(Sort.Direction.DESC, "createdAt"));
         return ApiResponse.ok(PageResponse.from(
-                incidentService.list(actor, status, severity, pageable), i -> i));
+                incidentService.list(actor, status, severity, priority, assigneeId, unassigned, pageable), i -> i));
+    }
+
+    /** Case priority (P1–P4). */
+    public record PriorityRequest(@NotNull IncidentPriority priority) {
+    }
+
+    @PatchMapping("/{id}/priority")
+    @PreAuthorize("hasAnyRole('ANALYST','ADMIN')")
+    public ApiResponse<IncidentResponse> priority(@PathVariable Long id,
+                                                  @Valid @RequestBody PriorityRequest request,
+                                                  @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(incidentService.setPriority(id, request.priority(), actor));
+    }
+
+    /** Merged case timeline: status/assignment/priority changes, notes, response actions, AI analyses. */
+    @GetMapping("/{id}/case-timeline")
+    public ApiResponse<List<CaseTimelineService.Entry>> caseTimeline(
+            @PathVariable Long id, @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(caseTimelineService.timeline(id, actor));
     }
 
     @GetMapping("/{id}")

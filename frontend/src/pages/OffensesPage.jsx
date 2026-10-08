@@ -7,8 +7,8 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
 import { listOffenses, listAssignees } from '../services/offenses.service.js';
 import { messageFromError } from '../services/errors.js';
+import { STATUSES, statusLabel } from '../services/caseLabels.js';
 
-const STATUSES = ['OPEN', 'INVESTIGATING', 'CONTAINED', 'RESOLVED', 'FALSE_POSITIVE'];
 
 /** QRadar-style Offenses: correlated incidents ranked by magnitude, with filters and live refresh. */
 export default function OffensesPage() {
@@ -49,7 +49,7 @@ export default function OffensesPage() {
       <div className="filters">
         <select value={filters.status} onChange={(e) => set({ status: e.target.value })} aria-label="Status">
           <option value="">Any status</option>
-          {STATUSES.map((s) => <option key={s}>{s}</option>)}
+          {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
         </select>
         {assignees.length > 0 && (
           <select value={filters.assigneeId} onChange={(e) => set({ assigneeId: e.target.value })} aria-label="Assignee">
@@ -82,7 +82,7 @@ export default function OffensesPage() {
                 <td>{o.categories.map((c) => <span key={c} className="chip">{c}</span>)}</td>
                 <td>{o.eventCount}</td>
                 <td className="small">{o.logSources.join(', ') || '—'}</td>
-                <td>{o.status}</td>
+                <td>{statusLabel(o.status)}</td>
                 <td>{o.assignedTo || <span className="muted">—</span>}</td>
                 <td className="small">{o.lastSeen ? new Date(o.lastSeen).toLocaleString() : '—'}</td>
               </tr>

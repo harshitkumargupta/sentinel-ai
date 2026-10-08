@@ -13,19 +13,14 @@ import SimilarIncidentsPanel from '../components/SimilarIncidentsPanel.jsx';
 import MagnitudePanel from '../components/MagnitudePanel.jsx';
 import OffenseCasePanel from '../components/OffenseCasePanel.jsx';
 import { getOffense } from '../services/offenses.service.js';
+import CaseTimeline from '../components/CaseTimeline.jsx';
+import { NEXT_STATUS, statusLabel } from '../services/caseLabels.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   getIncident, getRisk, getTimeline, getEvidence, getGraph, updateStatus, setFeedback,
 } from '../services/incidents.service.js';
 import { messageFromError } from '../services/errors.js';
 
-const NEXT_STATUS = {
-  OPEN: ['INVESTIGATING', 'FALSE_POSITIVE'],
-  INVESTIGATING: ['CONTAINED', 'FALSE_POSITIVE'],
-  CONTAINED: ['RESOLVED', 'FALSE_POSITIVE'],
-  RESOLVED: [],
-  FALSE_POSITIVE: [],
-};
 
 export default function IncidentDetailPage() {
   const { id } = useParams();
@@ -71,12 +66,13 @@ export default function IncidentDetailPage() {
                 <h2>Offense #{inc.id}: {inc.title}</h2>
                 <SeverityBadge severity={inc.severity} />
               </div>
-              <p className="subtitle">Status: <strong>{inc.status}</strong> · Feedback: {inc.feedback}</p>
+              <p className="subtitle">Status: <strong>{statusLabel(inc.status)}</strong> · Priority: <strong>{inc.priority}</strong>
+                {' '}· Assigned: <strong>{inc.assignedTo || 'unassigned'}</strong> · Feedback: {inc.feedback}</p>
 
               {canTriage && (
                 <div className="filters">
                   {(NEXT_STATUS[inc.status] || []).map((s) => (
-                    <button key={s} className="ghost" onClick={() => changeStatus(s)}>→ {s}</button>
+                    <button key={s} className="ghost" onClick={() => changeStatus(s)}>→ {statusLabel(s)}</button>
                   ))}
                   <button className="ghost" onClick={() => giveFeedback('TRUE_POSITIVE')}>Mark true positive</button>
                   <button className="ghost" onClick={() => giveFeedback('FALSE_POSITIVE')}>Mark false positive</button>
@@ -97,7 +93,7 @@ export default function IncidentDetailPage() {
               )}
 
               {data.offense && (
-                <OffenseCasePanel offense={data.offense.offense} notes={data.offense.notes}
+                <OffenseCasePanel offense={data.offense.offense} priority={inc.priority} notes={data.offense.notes}
                   canEdit={canTriage} onChanged={load} />
               )}
 
@@ -132,17 +128,7 @@ export default function IncidentDetailPage() {
               </section>
 
               <div className="panel-grid">
-                <section className="panel">
-                  <h3>Timeline</h3>
-                  <ul className="breakdown">
-                    {data.timeline.map((t) => (
-                      <li key={t.id}>
-                        <span>{t.type} <span className="muted small">{t.actor || 'system'}</span></span>
-                        <span className="muted small">{new Date(t.createdAt).toLocaleTimeString()}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <CaseTimeline incidentId={id} refreshKey={data.timeline.length} />
 
                 <section className="panel">
                   <h3>Alerts</h3>

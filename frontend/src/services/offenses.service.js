@@ -21,3 +21,12 @@ export async function addNote(id, body) {
   const { data } = await api.post(`/offenses/${id}/notes`, { body });
   return data.data;
 }
+
+export async function editNote(id, noteId, body) {
+  const { data } = await api.put(`/offenses/${id}/notes/${noteId}`, { body });
+  return data.data;
+}
+
+export async function deleteNote(id, noteId) {
+  await api.delete(`/offenses/${id}/notes/${noteId}`);
+}

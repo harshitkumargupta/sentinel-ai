@@ -17,6 +17,7 @@ public class TimelineService {
     public static final String ASSIGNMENT = "ASSIGNMENT";
     public static final String FEEDBACK = "FEEDBACK";
     public static final String ESCALATED = "ESCALATED";
+    public static final String PRIORITY_CHANGE = "PRIORITY_CHANGE";
 
     private final IncidentTimelineRepository timelineRepository;
 

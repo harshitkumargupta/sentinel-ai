@@ -54,12 +54,17 @@ public class Incident extends BaseAuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false,
-            columnDefinition = "enum('OPEN','INVESTIGATING','CONTAINED','RESOLVED','FALSE_POSITIVE')")
+            columnDefinition = "enum('OPEN','INVESTIGATING','CONTAINED','RESOLVED','FALSE_POSITIVE','CLOSED')")
     private IncidentStatus status;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "enum('LOW','MEDIUM','HIGH','CRITICAL')")
     private Severity severity;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "enum('P1','P2','P3','P4')")
+    private IncidentPriority priority = IncidentPriority.P3;
 
     @Column(name = "risk_score")
     private Integer riskScore;
@@ -86,4 +91,7 @@ public class Incident extends BaseAuditableEntity {
 
     @Column(name = "resolved_at")
     private Instant resolvedAt;
+
+    @Column(name = "closed_at")
+    private Instant closedAt;
 }

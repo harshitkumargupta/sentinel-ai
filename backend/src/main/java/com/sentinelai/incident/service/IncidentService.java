@@ -3,17 +3,20 @@ package com.sentinelai.incident.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.alert.dto.AlertResponse;
 import com.sentinelai.audit.service.AuditService;
+import com.sentinelai.auth.domain.Role;
 import com.sentinelai.auth.domain.User;
-import com.sentinelai.cache.IncidentsChangedEvent;
 import com.sentinelai.auth.repository.UserRepository;
 import com.sentinelai.auth.security.AppUserPrincipal;
+import com.sentinelai.cache.IncidentsChangedEvent;
 import com.sentinelai.common.domain.Severity;
+import com.sentinelai.common.exception.BadRequestException;
 import com.sentinelai.common.exception.InvalidStateTransitionException;
 import com.sentinelai.common.exception.NotFoundException;
 import com.sentinelai.event.dto.EventResponse;
 import com.sentinelai.incident.correlation.TimelineService;
 import com.sentinelai.incident.domain.Incident;
 import com.sentinelai.incident.domain.IncidentFeedback;
+import com.sentinelai.incident.domain.IncidentPriority;
 import com.sentinelai.incident.domain.IncidentStatus;
 import com.sentinelai.incident.dto.EvidenceResponse;
 import com.sentinelai.incident.dto.IncidentDetailResponse;
@@ -44,16 +47,22 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class IncidentService {
 
-    /** OPEN -> INVESTIGATING -> CONTAINED -> RESOLVED; FALSE_POSITIVE from any open state. */
+    /**
+     * Case workflow (UI labels in brackets): OPEN [New] → INVESTIGATING [In Progress] → CONTAINED →
+     * RESOLVED → CLOSED. In Progress may resolve directly; RESOLVED may be reopened to In Progress;
+     * FALSE_POSITIVE from any open state, then CLOSED. CLOSED is terminal.
+     */
     private static final Map<IncidentStatus, Set<IncidentStatus>> TRANSITIONS =
             new EnumMap<>(IncidentStatus.class);
 
     static {
         TRANSITIONS.put(IncidentStatus.OPEN, Set.of(IncidentStatus.INVESTIGATING, IncidentStatus.FALSE_POSITIVE));
-        TRANSITIONS.put(IncidentStatus.INVESTIGATING, Set.of(IncidentStatus.CONTAINED, IncidentStatus.FALSE_POSITIVE));
+        TRANSITIONS.put(IncidentStatus.INVESTIGATING, Set.of(
+                IncidentStatus.CONTAINED, IncidentStatus.RESOLVED, IncidentStatus.FALSE_POSITIVE));
         TRANSITIONS.put(IncidentStatus.CONTAINED, Set.of(IncidentStatus.RESOLVED, IncidentStatus.FALSE_POSITIVE));
-        TRANSITIONS.put(IncidentStatus.RESOLVED, Set.of());
-        TRANSITIONS.put(IncidentStatus.FALSE_POSITIVE, Set.of());
+        TRANSITIONS.put(IncidentStatus.RESOLVED, Set.of(IncidentStatus.CLOSED, IncidentStatus.INVESTIGATING));
+        TRANSITIONS.put(IncidentStatus.FALSE_POSITIVE, Set.of(IncidentStatus.CLOSED));
+        TRANSITIONS.put(IncidentStatus.CLOSED, Set.of());
     }
 
     private final IncidentRepository incidentRepository;
@@ -69,6 +78,14 @@ public class IncidentService {
     @Transactional(readOnly = true)
     public Page<IncidentResponse> list(AppUserPrincipal actor, IncidentStatus status,
                                        Severity severity, Pageable pageable) {
+        return list(actor, status, severity, null, null, false, pageable);
+    }
+
+    /** {@code unassigned=true} selects cases with no assignee (overrides {@code assigneeId}). */
+    @Transactional(readOnly = true)
+    public Page<IncidentResponse> list(AppUserPrincipal actor, IncidentStatus status, Severity severity,
+                                       IncidentPriority priority, Long assigneeId, boolean unassigned,
+                                       Pageable pageable) {
         Specification<Incident> spec = (root, query, cb) -> {
             List<Predicate> p = new ArrayList<>();
             p.add(cb.equal(root.get("org").get("id"), actor.getOrgId()));
@@ -77,6 +94,14 @@ public class IncidentService {
             }
             if (severity != null) {
                 p.add(cb.equal(root.get("severity"), severity));
+            }
+            if (priority != null) {
+                p.add(cb.equal(root.get("priority"), priority));
+            }
+            if (unassigned) {
+                p.add(cb.isNull(root.get("assignedTo")));
+            } else if (assigneeId != null) {
+                p.add(cb.equal(root.get("assignedTo").get("id"), assigneeId));
             }
             return cb.and(p.toArray(Predicate[]::new));
         };
@@ -128,6 +153,9 @@ public class IncidentService {
         if (newStatus == IncidentStatus.RESOLVED) {
             incident.setResolvedAt(Instant.now());
         }
+        if (newStatus == IncidentStatus.CLOSED) {
+            incident.setClosedAt(Instant.now());
+        }
         incidentRepository.save(incident);
         String detail = "{\"from\":\"" + current + "\",\"to\":\"" + newStatus + "\"}";
         timeline.record(id, TimelineService.STATUS_CHANGE, actor.getUsername(), detail);
@@ -157,12 +185,31 @@ public class IncidentService {
             User assignee = userRepository.findById(assigneeId)
                     .filter(u -> u.getOrg().getId().equals(actor.getOrgId()))
                     .orElseThrow(() -> new NotFoundException("Assignee not found: " + assigneeId));
+            if (!assignee.isEnabled() || (assignee.getRole() != Role.ANALYST && assignee.getRole() != Role.ADMIN)) {
+                throw new BadRequestException("Cases can only be assigned to enabled analysts or admins");
+            }
             incident.setAssignedTo(assignee);
         }
         incidentRepository.save(incident);
         String detail = "{\"assigneeId\":" + assigneeId + "}";
         timeline.record(id, TimelineService.ASSIGNMENT, actor.getUsername(), detail);
         auditService.record(actor.getOrgId(), actor.getUserId(), "INCIDENT_ASSIGN", "incident", id, detail, null);
+        events.publishEvent(new IncidentsChangedEvent(actor.getOrgId()));
+        return IncidentResponse.from(incident);
+    }
+
+    @Transactional
+    public IncidentResponse setPriority(Long id, IncidentPriority priority, AppUserPrincipal actor) {
+        Incident incident = load(id, actor);
+        IncidentPriority current = incident.getPriority();
+        if (current == priority) {
+            return IncidentResponse.from(incident);
+        }
+        incident.setPriority(priority);
+        incidentRepository.save(incident);
+        String detail = "{\"from\":\"" + current + "\",\"to\":\"" + priority + "\"}";
+        timeline.record(id, TimelineService.PRIORITY_CHANGE, actor.getUsername(), detail);
+        auditService.record(actor.getOrgId(), actor.getUserId(), "INCIDENT_PRIORITY_CHANGE", "incident", id, detail, null);
         events.publishEvent(new IncidentsChangedEvent(actor.getOrgId()));
         return IncidentResponse.from(incident);
     }
