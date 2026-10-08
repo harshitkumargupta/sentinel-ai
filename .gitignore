@@ -4,6 +4,8 @@ backend/target/
 *.jar
 !**/maven-wrapper.jar
 *.log
+# ...except the bundled sample datasets the parsers and Demo Center replay ship with.
+!backend/src/main/resources/samples/*.log
 hs_err_pid*
 
 # ---- Node / Vite ----
