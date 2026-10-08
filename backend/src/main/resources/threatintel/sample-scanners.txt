@@ -1,0 +1,4 @@
+# name: Sample internet scanners
+# SAMPLE OFFLINE FEED — illustrative entries matching the bundled nginx sample, not a real feed.
+185.220.101.4
+45.33.0.5

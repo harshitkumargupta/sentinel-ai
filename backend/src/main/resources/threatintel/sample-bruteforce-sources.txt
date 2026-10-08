@@ -1,0 +1,7 @@
+# name: Sample brute-force sources
+# SAMPLE OFFLINE FEED for the SentinelAI demo. Entries match the bundled sample datasets and the
+# simulator; they are illustrative, NOT an authoritative threat-intelligence list.
+# Format: one IPv4 address or CIDR per line; '#' starts a comment.
+45.33.12.7
+185.220.101.9
+203.0.113.50

@@ -9,11 +9,13 @@ import ThreatCoreLazy from './three/ThreatCoreLazy.jsx';
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: '▦' },
   { to: '/events', label: 'Events', icon: '≋' },
+  { to: '/search', label: 'Event Search', icon: '⌕' },
   { to: '/alerts', label: 'Alerts', icon: '⚑' },
   { to: '/offenses', label: 'Offenses', icon: '✸' },
   { to: '/incidents', label: 'Incidents', icon: '☰' },
   { to: '/evaluation', label: 'Evaluation', icon: '✓' },
   { to: '/rules', label: 'Rules', icon: '⚙︎' },
+  { to: '/reference-sets', label: 'Reference Sets', icon: '☷' },
   { to: '/log-sources', label: 'Log Sources', icon: '⇲', roles: ['ANALYST', 'ADMIN'] },
   { to: '/sites', label: 'Sites', icon: '⌂' },
   { to: '/admin', label: 'Admin', icon: '⚙', role: 'ADMIN' },
