@@ -18,6 +18,16 @@ summarization in later phases.
 > See [deployment](docs/deployment.md) · [runbook](docs/runbook.md) · [demo](docs/demo-script.md) ·
 > [report](docs/report/report.md).
 
+## Quick demo (one command, no keys)
+
+```bash
+./scripts/demo.sh up     # then open http://localhost:8088 and use "Login as Admin"
+```
+
+Admin → **Demo Center** → *Seed Sample Data* → *Run Full Attack Chain* → open an **Offense**.
+The full click-by-click script, with what appears on screen and what is simulated, is in
+[docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md).
+
 ---
 
 ## Tech stack
