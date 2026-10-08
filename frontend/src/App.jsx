@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Layout from './components/Layout.jsx';
 
+const LandingPage = lazy(() => import('./landing/LandingPage.jsx'));
+
 // Route-level code splitting: each page (and its heavy deps like Recharts) loads on demand, keeping
 // the initial/login payload small. The shell (Layout) stays mounted; only page content transitions.
 const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
@@ -40,10 +42,11 @@ export default function App() {
   return (
     <Suspense fallback={<div className="route-fallback" />}>
       <Routes>
+      {/* Public landing page — no auth required, no Layout shell */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       {/* Authenticated shell: persistent sidebar/top bar, animated page transitions. */}
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/executive" element={<ExecutivePage />} />
         <Route path="/connect-website" element={admin(<ConnectWebsitePage />)} />

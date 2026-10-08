@@ -1,0 +1,642 @@
+/*
+ * SentinelAI Login Page v2 — cinematic command-center entry
+ * All rules are namespaced under .lpv2-shell to prevent style bleed into the SOC app.
+ */
+
+/* Archivo variable font — same type family as the landing page (cinematic condensed display). */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap');
+
+/* ── Shell ── */
+.lpv2-shell {
+  min-height: 100vh;
+  background: #040c18;
+  color: #eef3fa;
+  font-family: 'Archivo', var(--font-sans, 'Inter', system-ui, sans-serif);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Subtle dot-grid background */
+.lpv2-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(77, 181, 245, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77, 181, 245, 0.035) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Navigation ── */
+.lpv2-nav {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0 clamp(1.5rem, 5vw, 4rem);
+  height: 60px;
+  border-bottom: 1px solid rgba(43, 56, 80, 0.55);
+  background: rgba(4, 12, 24, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.lpv2-brand {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  color: #eef3fa;
+  text-decoration: none;
+  white-space: nowrap;
+  font-stretch: 85%;
+  font-variation-settings: 'wdth' 85;
+}
+
+.lpv2-brand-accent {
+  color: #22d3ee;
+}
+
+.lpv2-navlinks {
+  display: flex;
+  gap: 1.75rem;
+  align-items: center;
+}
+
+.lpv2-navlink {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(238, 243, 250, 0.55);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.lpv2-navlink:hover { color: rgba(238, 243, 250, 0.9); }
+
+.lpv2-nav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 12.5px;
+  color: rgba(238, 243, 250, 0.45);
+  white-space: nowrap;
+}
+
+.lpv2-create-link {
+  color: #22d3ee;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 180ms;
+}
+
+.lpv2-create-link:hover { opacity: 0.75; }
+
+/* ── Body layout ── */
+.lpv2-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: calc(100vh - 60px);
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Left column ── */
+.lpv2-left {
+  padding: clamp(2rem, 5vw, 4rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2rem;
+  overflow-y: auto;
+}
+
+.lpv2-eyebrow {
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #73d7e8;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.lpv2-eyebrow::before {
+  content: '';
+  display: block;
+  width: 22px;
+  height: 1px;
+  background: #73d7e8;
+  flex-shrink: 0;
+}
+
+.lpv2-headline {
+  font-size: clamp(2.2rem, 3.5vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  margin: 0;
+  color: #eef3fa;
+  font-stretch: 68%;
+  font-variation-settings: 'wdth' 68;
+}
+
+.lpv2-headline-accent { color: #73d7e8; }
+
+.lpv2-support {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: rgba(238, 243, 250, 0.6);
+  max-width: 400px;
+  margin: 0;
+}
+
+/* Metrics row */
+.lpv2-metrics {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  row-gap: 1rem;
+}
+
+.lpv2-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 1.25rem;
+}
+
+.lpv2-metric:first-child { padding-left: 0; }
+
+.lpv2-metric-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #eef3fa;
+  line-height: 1;
+}
+
+.lpv2-metric-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(238, 243, 250, 0.5);
+}
+
+.lpv2-metric-sep {
+  width: 1px;
+  height: 36px;
+  background: rgba(43, 56, 80, 0.8);
+  flex-shrink: 0;
+}
+
+/* Command center panel */
+.lpv2-command {
+  background: linear-gradient(145deg, rgba(18, 25, 38, 0.82) 0%, rgba(10, 16, 28, 0.86) 100%);
+  border: 1px solid rgba(43, 56, 80, 0.75);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  max-width: 480px;
+}
+
+.lpv2-command::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(115, 215, 232, 0.38), transparent);
+}
+
+.lpv2-cmd-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 0.75rem;
+}
+
+.lpv2-cmd-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lpv2-cmd-title {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(238, 243, 250, 0.5);
+  margin-left: 0.4rem;
+}
+
+.lpv2-cmd-headline {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #eef3fa;
+  line-height: 1.4;
+  margin: 0 0 1rem;
+}
+
+/* Mock terminal output stream */
+.lpv2-cmd-stream {
+  background: rgba(4, 12, 24, 0.65);
+  border: 1px solid rgba(43, 56, 80, 0.5);
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  line-height: 1.5;
+  color: rgba(238, 243, 250, 0.35);
+  overflow: hidden;
+  max-height: 82px;
+}
+
+.lpv2-cmd-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lpv2-cmd-line--ok { color: rgba(47, 191, 97, 0.75); }
+.lpv2-cmd-line--alert { color: rgba(200, 77, 77, 0.9); }
+
+.lpv2-cmd-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono, monospace);
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.lpv2-cmd-stage {
+  padding: 3px 9px;
+  border: 1px solid rgba(43, 56, 80, 0.7);
+  border-radius: 4px;
+  color: rgba(238, 243, 250, 0.35);
+}
+
+.lpv2-cmd-stage--active {
+  border-color: rgba(115, 215, 232, 0.4);
+  color: #73d7e8;
+  background: rgba(115, 215, 232, 0.05);
+}
+
+.lpv2-cmd-arrow { color: rgba(238, 243, 250, 0.18); }
+
+/* ── Right column ── */
+.lpv2-right {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(0, 200, 232, 0.06) 0%, transparent 70%), #040c18;
+}
+
+.lpv2-globe-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+/* ── Login card ── */
+.lpv2-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(372px, calc(100% - 3rem));
+  background: linear-gradient(180deg, rgba(18, 25, 38, 0.9) 0%, rgba(10, 16, 28, 0.94) 100%);
+  border: 1px solid rgba(43, 56, 80, 0.85);
+  border-radius: 16px;
+  padding: 2rem 1.75rem;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(77, 181, 245, 0.07);
+  z-index: 10;
+}
+
+.lpv2-card-topline {
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(115, 215, 232, 0.34), transparent);
+  border-radius: 16px 16px 0 0;
+}
+
+.lpv2-card-heading {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 0.3rem;
+  color: #eef3fa;
+}
+
+.lpv2-card-sub {
+  font-size: 12.5px;
+  color: rgba(238, 243, 250, 0.45);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+/* Fields */
+.lpv2-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 0.9rem;
+}
+
+.lpv2-field label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba(238, 243, 250, 0.6);
+  letter-spacing: 0.02em;
+}
+
+.lpv2-field-wrap { position: relative; }
+
+.lpv2-input {
+  width: 100%;
+  padding: 0.62rem 0.85rem;
+  background: rgba(4, 12, 24, 0.72);
+  border: 1px solid rgba(43, 56, 80, 0.85);
+  border-radius: 8px;
+  color: #eef3fa;
+  font-size: 13.5px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+  box-sizing: border-box;
+}
+
+.lpv2-input:focus {
+  border-color: rgba(115, 215, 232, 0.5);
+  box-shadow: 0 0 0 3px rgba(115, 215, 232, 0.1);
+}
+
+.lpv2-input::placeholder { color: rgba(238, 243, 250, 0.3); }
+
+.lpv2-input--pwd { padding-right: 2.6rem; }
+
+.lpv2-pwd-toggle {
+  position: absolute;
+  right: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(238, 243, 250, 0.35);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 150ms;
+  border-radius: 4px;
+}
+
+.lpv2-pwd-toggle:hover { color: rgba(238, 243, 250, 0.75); }
+
+/* Remember / forgot row */
+.lpv2-remember-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.15rem;
+}
+
+.lpv2-remember {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(238, 243, 250, 0.5);
+  cursor: pointer;
+  user-select: none;
+}
+
+.lpv2-remember input[type="checkbox"] {
+  accent-color: #73d7e8;
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+
+.lpv2-forgot {
+  font-size: 12px;
+  color: rgba(238, 243, 250, 0.55);
+  text-decoration: none;
+  transition: color 150ms;
+}
+
+.lpv2-forgot:hover { color: #73d7e8; }
+
+/* Error banner */
+.lpv2-error {
+  color: #ff6b70;
+  font-size: 12.5px;
+  margin-bottom: 0.9rem;
+  padding: 0.5rem 0.7rem;
+  background: rgba(200, 77, 77, 0.12);
+  border: 1px solid rgba(200, 77, 77, 0.32);
+  border-radius: 6px;
+}
+
+/* Submit button */
+.lpv2-submit {
+  width: 100%;
+  padding: 0.72rem;
+  background: linear-gradient(135deg, #2f9ef7 0%, #73d7e8 100%);
+  border: none;
+  border-radius: 8px;
+  color: #04121c;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: opacity 180ms ease, transform 120ms ease;
+  margin-bottom: 1.1rem;
+  font-family: inherit;
+}
+
+.lpv2-submit:hover:not(:disabled) { opacity: 0.9; }
+.lpv2-submit:active:not(:disabled) { transform: translateY(1px); }
+.lpv2-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* OR divider */
+.lpv2-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.9rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(238, 243, 250, 0.4);
+}
+
+.lpv2-divider::before,
+.lpv2-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(43, 56, 80, 0.7);
+}
+
+/* OAuth buttons */
+.lpv2-oauth {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin-bottom: 1.15rem;
+}
+
+.lpv2-oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0.5rem 0.65rem;
+  background: rgba(18, 25, 38, 0.55);
+  border: 1px solid rgba(43, 56, 80, 0.7);
+  border-radius: 7px;
+  color: rgba(238, 243, 250, 0.38);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+/* Security footer */
+.lpv2-security-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(43, 56, 80, 0.45);
+  font-size: 10.5px;
+  color: rgba(238, 243, 250, 0.42);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ── Keyboard focus visibility ── */
+.lpv2-shell a:focus-visible,
+.lpv2-shell button:focus-visible {
+  outline: 2px solid rgba(115, 215, 232, 0.75);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Dev-only quick login section */
+.lpv2-dev-quick {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed rgba(43, 56, 80, 0.5);
+}
+
+.lpv2-dev-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(240, 180, 41, 0.5);
+  margin-bottom: 0.45rem;
+}
+
+.lpv2-dev-btns {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.lpv2-dev-btn {
+  padding: 0.3rem 0.65rem;
+  background: rgba(18, 25, 38, 0.55);
+  border: 1px solid rgba(240, 180, 41, 0.28);
+  border-radius: 5px;
+  color: rgba(240, 180, 41, 0.65);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 140ms, color 140ms;
+}
+
+.lpv2-dev-btn:hover:not(:disabled) {
+  border-color: rgba(240, 180, 41, 0.58);
+  color: rgba(240, 180, 41, 0.9);
+}
+
+.lpv2-dev-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .lpv2-shell { overflow-y: auto; overflow-x: hidden; }
+
+  .lpv2-body {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 60px);
+  }
+
+  .lpv2-right {
+    order: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.25rem;
+    min-height: 0;
+    flex-shrink: 0;
+  }
+
+  .lpv2-left {
+    order: 2;
+    padding: 2.5rem 1.75rem;
+    justify-content: flex-start;
+  }
+
+  .lpv2-navlinks { display: none; }
+
+  /* Card flows inside the globe section so it can never be clipped
+     (the section grows to fit it) and never covers form controls. */
+  .lpv2-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: min(372px, calc(100% - 1.5rem));
+  }
+}
+
+@media (max-width: 600px) {
+  .lpv2-right { padding: 2rem 1rem; }
+
+  .lpv2-nav-right > span:first-child { display: none; }
+
+  .lpv2-headline { font-size: 1.9rem; }
+
+  .lpv2-metrics { gap: 0; }
+  .lpv2-metric { padding: 0 0.85rem; }
+  .lpv2-metric:first-child { padding-left: 0; }
+
+  .lpv2-card { padding: 1.5rem 1.25rem; }
+}
+
+/* Reduced motion: disable globe pulse animation via CSS property inheritance */
+@media (prefers-reduced-motion: reduce) {
+  .lpv2-submit,
+  .lpv2-input,
+  .lpv2-navlink,
+  .lpv2-create-link,
+  .lpv2-forgot,
+  .lpv2-pwd-toggle { transition-duration: 0.001ms !important; }
+}

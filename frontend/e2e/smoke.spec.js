@@ -8,10 +8,10 @@ const PASS = process.env.ADMIN_PASS || 'Admin@123';
 async function login(page) {
   await page.goto('/login');
   await page.getByLabel('Username').fill(USER);
-  await page.getByLabel('Password').fill(PASS);
+  await page.getByLabel('Password', { exact: true }).fill(PASS);
   await page.getByRole('button', { name: /sign in/i }).click();
   await expect(page).toHaveURL(/dashboard/);
-  await expect(page.getByText('Command Center')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command Center', exact: true })).toBeVisible();
 }
 
 test('login → dashboard → incident → investigate → approve', async ({ page }) => {
