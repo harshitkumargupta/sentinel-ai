@@ -25,6 +25,13 @@
     </properties>
 
     <dependencies>
+        <!-- Reports: PDF rendering (Apache-2.0, pure Java, works offline) -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+
         <!-- Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

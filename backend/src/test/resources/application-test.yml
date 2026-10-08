@@ -37,6 +37,8 @@ sentinel:
     enabled: false   # default; Redis integration tests enable it explicitly
   kafka:
     enabled: false   # default; Kafka integration tests enable it explicitly
+  reports:
+    scheduler-enabled: false   # tests drive ReportScheduleService.runDue() directly
   ai:
     enabled: false   # default; AI tests enable it explicitly
     provider: fake
