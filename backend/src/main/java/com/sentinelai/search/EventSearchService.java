@@ -33,6 +33,7 @@ public class EventSearchService {
     public static final int MAX_EXPORT_ROWS = 10_000;
 
     private final SecurityEventRepository eventRepository;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public PageResponse<EventResponse> search(AppUserPrincipal actor, SearchFilters filters, String query,
@@ -46,6 +47,28 @@ public class EventSearchService {
     @Transactional(readOnly = true)
     public long count(AppUserPrincipal actor, SearchFilters filters, String query) {
         return eventRepository.count(spec(actor, filters, query));
+    }
+
+    public record TopRow(String value, long count) {
+    }
+
+    /** Top {@code n} values of a field (sourceIp / username / geoCountry / eventType) over the matching events. */
+    @Transactional(readOnly = true)
+    public List<TopRow> top(AppUserPrincipal actor, SearchFilters filters, String query, String field, int n) {
+        if (!List.of("sourceIp", "username", "geoCountry", "eventType").contains(field)) {
+            throw new BadRequestException("Unsupported field for top: " + field);
+        }
+        Specification<SecurityEvent> spec = spec(actor, filters, query);
+        var cb = entityManager.getCriteriaBuilder();
+        var cq = cb.createQuery(Object[].class);
+        var root = cq.from(SecurityEvent.class);
+        var path = root.get(field);
+        var count = cb.count(root);
+        cq.multiselect(path, count)
+                .where(cb.and(spec.toPredicate(root, cq, cb), cb.isNotNull(path)))
+                .groupBy(path).orderBy(cb.desc(count));
+        return entityManager.createQuery(cq).setMaxResults(Math.max(1, Math.min(n, 50))).getResultList().stream()
+                .map(r -> new TopRow(String.valueOf(r[0]), (Long) r[1])).toList();
     }
 
     @Transactional(readOnly = true)

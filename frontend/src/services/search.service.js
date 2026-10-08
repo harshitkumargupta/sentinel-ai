@@ -41,3 +41,13 @@ export async function pinnedSearchStats() {
   const { data } = await api.get('/saved-searches/pinned');
   return data.data; // [{ id, name, count, hourly[24], from, to }]
 }
+
+export async function translatePlainEnglish(text) {
+  const { data } = await api.get('/search/events/translate', { params: { text } });
+  return data.data; // { understood, query, top: {field, n}?, understoodParts, message }
+}
+
+export async function topValues(field, n, q) {
+  const { data } = await api.get('/search/events/top', { params: { field, n, q: q || undefined } });
+  return data.data;
+}

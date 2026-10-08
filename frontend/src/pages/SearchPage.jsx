@@ -4,6 +4,7 @@ import SeverityBadge from '../components/SeverityBadge.jsx';
 import { listLogSources } from '../services/logsources.service.js';
 import {
   exportEventsCsv, getSearchFields, searchEvents, listSavedSearches, saveSearch, deleteSavedSearch,
+  translatePlainEnglish, topValues,
 } from '../services/search.service.js';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -22,6 +23,12 @@ const EXAMPLES = [
   "resource LIKE '/admin*'",
   "user = 'root' OR user = 'admin'",
 ];
+const NL_EXAMPLES = [
+  'failed logins in the last hour', 'successful logins yesterday', 'failed logins from 45.33.12.7',
+  'everything for user alice today', 'brute force in the last 24 hours', 'top 5 IPs with failed logins this week',
+  'port scan from 185.220.101.4', 'logins from Russia in the last 7 days', 'high severity alerts last 2 hours',
+  'top 10 users in the last 30 days',
+];
 const EMPTY = { range: '24h', sourceId: '', ip: '', user: '', eventType: '', outcome: '' };
 
 /** QRadar-style Log Activity: filters + a small query language, paginated results, CSV export. */
@@ -38,6 +45,28 @@ export default function SearchPage() {
   const [error, setError] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [saved, setSaved] = useState([]);
+  const [nl, setNl] = useState('');
+  const [nlResult, setNlResult] = useState(null);
+  const [top, setTop] = useState(null);
+
+  async function ask(text) {
+    const phrase = (text ?? nl).trim();
+    if (!phrase) return;
+    setNl(phrase);
+    try {
+      const r = await translatePlainEnglish(phrase);
+      setNlResult(r);
+      setTop(null);
+      if (!r.understood) return;
+      // Time lives in the generated query, so search over all time and let the user edit it.
+      const f = { ...EMPTY, range: 'all' };
+      setFilters(f);
+      setQuery(r.query || '');
+      setPageNo(0);
+      setSubmitted({ filters: f, query: r.query || '' });
+      if (r.top) setTop({ ...r.top, rows: await topValues(r.top.field, r.top.n, r.query) });
+    } catch (e) { setError(messageFromError(e)); }
+  }
   const [urlParams] = useSearchParams();
 
   const loadSaved = useCallback(() => { listSavedSearches().then(setSaved).catch(() => {}); }, []);
@@ -119,6 +148,27 @@ export default function SearchPage() {
   return (
     <>
       <h2>Event Search</h2>
+      <section className="panel">
+        <form className="filters" onSubmit={(e) => { e.preventDefault(); ask(); }}>
+          <input style={{ flex: 1, minWidth: 260 }} maxLength={300} placeholder="Ask in plain English, e.g. failed logins from 45.33.12.7 in the last hour"
+            value={nl} onChange={(e) => setNl(e.target.value)} aria-label="Ask in plain English" />
+          <button type="submit">Ask</button>
+        </form>
+        <div className="chip-row">
+          {NL_EXAMPLES.map((ex) => <button key={ex} type="button" className="evidence-chip" onClick={() => ask(ex)}>{ex}</button>)}
+        </div>
+        {nlResult && (nlResult.understood
+          ? <p className="small">{nlResult.message}. Generated query (edit below and press Search): <code>{nlResult.query || '(all events)'}</code></p>
+          : <p className="error-text small">{nlResult.message}</p>)}
+        {top && (
+          <table className="data-table" style={{ maxWidth: 480 }}>
+            <thead><tr><th>Top {top.n} {top.field}</th><th>Events</th></tr></thead>
+            <tbody>{top.rows.map((r) => <tr key={r.value}><td><code>{r.value}</code></td><td>{r.count}</td></tr>)}</tbody>
+          </table>
+        )}
+        <p className="muted small">Offline and rule-based — no AI service. Times are UTC.</p>
+      </section>
+
       <form className="panel" onSubmit={run}>
         <div className="filters">
           <select value={filters.range} onChange={(e) => setFilters({ ...filters, range: e.target.value })} aria-label="Time range">

@@ -94,6 +94,19 @@ class EventSearchApiTest extends IntegrationTestSupport {
     }
 
     @Test
+    void translateAndTopN() throws Exception {
+        mockMvc.perform(get("/api/search/events/translate").param("text", "failed logins from 10.0.0.5").header("Authorization", viewer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.query").value("type = 'FAILED_LOGIN' AND ip = '10.0.0.5'"));
+        mockMvc.perform(get("/api/search/events/top").param("field", "username").param("q", "ip = '10.0.0.5'")
+                        .header("Authorization", viewer))
+                .andExpect(jsonPath("$.data[0].value").value("alice"))
+                .andExpect(jsonPath("$.data[0].count").value(2));
+        mockMvc.perform(get("/api/search/events/top").param("field", "rawPayload").header("Authorization", viewer))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void csvExportIsFormulaSafe() throws Exception {
         String csv = mockMvc.perform(get("/api/search/events/export").param("q", "ip = '10.0.0.9'").header("Authorization", viewer))
                 .andExpect(status().isOk())
