@@ -26,6 +26,7 @@ const AssetsPage = lazy(() => import('./pages/AssetsPage.jsx'));
 const NotificationSettingsPage = lazy(() => import('./pages/NotificationSettingsPage.jsx'));
 const PlaybooksPage = lazy(() => import('./pages/PlaybooksPage.jsx'));
 const HoneytokensPage = lazy(() => import('./pages/HoneytokensPage.jsx'));
+const CoveragePage = lazy(() => import('./pages/CoveragePage.jsx'));
 const ReferenceSetsPage = lazy(() => import('./pages/ReferenceSetsPage.jsx'));
 
 const admin = (el) => <ProtectedRoute roles={['ADMIN']}>{el}</ProtectedRoute>;
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/notifications" element={admin(<NotificationSettingsPage />)} />
         <Route path="/playbooks" element={<PlaybooksPage />} />
         <Route path="/honeytokens" element={analyst(<HoneytokensPage />)} />
+        <Route path="/coverage" element={analyst(<CoveragePage />)} />
         <Route path="/reference-sets" element={<ReferenceSetsPage />} />
         <Route path="/demo-center" element={admin(<DemoCenterPage />)} />
         <Route path="/admin" element={admin(<AdminPage />)} />

@@ -27,6 +27,12 @@ public final class DemoCatalog {
             "credential_stuffing", "brute_force", "impossible_travel",
             "abnormal_access", "api_abuse", "honeytoken");
 
+    /**
+     * Scenarios whose signal depends on their original timestamps (03:00 UTC), so a run re-timed to
+     * "now" can't exercise them; coverage runs skip them rather than report a misleading miss.
+     */
+    public static final java.util.Set<String> TIME_DEPENDENT = java.util.Set.of("suspicious_login");
+
     private static final Map<String, Entry> ENTRIES = new LinkedHashMap<>();
 
     static {

@@ -37,6 +37,12 @@ public class MitreCatalog {
         this.techniques = Map.copyOf(loaded);
     }
 
+    /** Every catalogued technique (for coverage matrices), sorted by tactic then id. */
+    public java.util.List<Technique> all() {
+        return techniques.entrySet().stream().map(e -> new Technique(e.getKey(), e.getValue().name(), e.getValue().tactic()))
+                .sorted(java.util.Comparator.comparing(Technique::tactic).thenComparing(Technique::id)).toList();
+    }
+
     public Technique lookup(String id) {
         Entry e = id == null ? null : techniques.get(id);
         return e == null
