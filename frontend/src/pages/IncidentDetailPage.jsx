@@ -16,6 +16,7 @@ import { getOffense } from '../services/offenses.service.js';
 import CaseTimeline from '../components/CaseTimeline.jsx';
 import AffectedAssetsPanel from '../components/AffectedAssetsPanel.jsx';
 import RunPlaybookPanel from '../components/RunPlaybookPanel.jsx';
+import AttackGraphPanel from '../components/AttackGraphPanel.jsx';
 import { NEXT_STATUS, statusLabel } from '../services/caseLabels.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
@@ -112,6 +113,8 @@ export default function IncidentDetailPage() {
               {canTriage && <ActionsPanel incidentId={id} canAct={canTriage} />}
 
               <SimilarIncidentsPanel incidentId={id} />
+
+              <AttackGraphPanel events={data.evidence?.events} />
 
               <section className="panel">
                 <h3>Risk breakdown</h3>
