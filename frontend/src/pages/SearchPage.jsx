@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import { listLogSources } from '../services/logsources.service.js';
-import { exportEventsCsv, getSearchFields, searchEvents } from '../services/search.service.js';
+import {
+  exportEventsCsv, getSearchFields, searchEvents, listSavedSearches, saveSearch, deleteSavedSearch,
+} from '../services/search.service.js';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { messageFromError } from '../services/errors.js';
 
@@ -34,6 +37,42 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [saved, setSaved] = useState([]);
+  const [params] = useSearchParams();
+
+  const loadSaved = useCallback(() => { listSavedSearches().then(setSaved).catch(() => {}); }, []);
+  useEffect(() => { loadSaved(); }, [loadSaved]);
+
+  function applySaved(s) {
+    const f = { ...EMPTY, ...Object.fromEntries(Object.entries(s.filters || {}).filter(([, v]) => v != null)) };
+    setFilters(f);
+    setQuery(s.query || '');
+    setPageNo(0);
+    setSubmitted({ filters: f, query: s.query || '' });
+  }
+
+  // Opened from a dashboard widget: /search?saved=<id>
+  useEffect(() => {
+    const id = Number(params.get('saved'));
+    const s = saved.find((x) => x.id === id);
+    if (s) applySaved(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, saved]);
+
+  async function saveCurrent() {
+    const name = window.prompt('Name this search');
+    if (!name) return;
+    const f = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''));
+    try {
+      await saveSearch(null, { name, query: query || null, filters: f, pinned: false });
+      loadSaved();
+    } catch (e) { setError(messageFromError(e)); }
+  }
+
+  async function togglePin(s) {
+    try { await saveSearch(s.id, { name: s.name, query: s.query, filters: s.filters, pinned: !s.pinned }); loadSaved(); }
+    catch (e) { setError(messageFromError(e)); }
+  }
 
   useEffect(() => {
     getSearchFields().then(setFields).catch(() => {});
@@ -109,6 +148,7 @@ export default function SearchPage() {
           <button type="submit">Search</button>
           <button type="button" className="ghost" onClick={() => { setFilters(EMPTY); setQuery(''); setPageNo(0); setSubmitted({ filters: EMPTY, query: '' }); }}>Clear</button>
           <button type="button" className="ghost" onClick={exportCsv} disabled={!result?.totalElements}>Export CSV</button>
+          <button type="button" className="ghost" onClick={saveCurrent}>Save search</button>
           <button type="button" className="ghost" onClick={() => setShowHelp((v) => !v)} aria-expanded={showHelp}>Query help</button>
         </div>
         {showHelp && (
@@ -125,6 +165,27 @@ export default function SearchPage() {
           </div>
         )}
       </form>
+
+      {saved.length > 0 && (
+        <section className="panel">
+          <h3>Saved searches</h3>
+          <table className="data-table">
+            <thead><tr><th>Name</th><th>Query</th><th>Range</th><th></th></tr></thead>
+            <tbody>
+              {saved.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.name}</td><td className="small"><code>{s.query || '—'}</code></td><td>{s.filters?.range || '—'}</td>
+                  <td>
+                    <button className="ghost" onClick={() => applySaved(s)}>Run</button>
+                    <button className="ghost" onClick={() => togglePin(s)} aria-pressed={s.pinned}>{s.pinned ? 'Unpin' : 'Pin to dashboard'}</button>
+                    <button className="ghost" onClick={async () => { try { await deleteSavedSearch(s.id); loadSaved(); } catch (e) { setError(messageFromError(e)); } }}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {error && <p className="error-text">{error}</p>}
       <DataState loading={loading && !result} error={null} empty={rows.length === 0} emptyText="No events match.">

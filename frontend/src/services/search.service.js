@@ -22,3 +22,22 @@ export async function exportEventsCsv(params = {}) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+export async function listSavedSearches() {
+  const { data } = await api.get('/saved-searches');
+  return data.data;
+}
+
+export async function saveSearch(id, body) {
+  const { data } = id ? await api.put(`/saved-searches/${id}`, body) : await api.post('/saved-searches', body);
+  return data.data;
+}
+
+export async function deleteSavedSearch(id) {
+  await api.delete(`/saved-searches/${id}`);
+}
+
+export async function pinnedSearchStats() {
+  const { data } = await api.get('/saved-searches/pinned');
+  return data.data; // [{ id, name, count, hourly[24], from, to }]
+}

@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
 import { useNavigate } from 'react-router-dom';
 import TuningCard from '../components/TuningCard.jsx';
+import PinnedSearchWidgets from '../components/PinnedSearchWidgets.jsx';
 import ThreatCoreLazy from '../components/three/ThreatCoreLazy.jsx';
 import AttackGlobeLazy from '../components/three/AttackGlobeLazy.jsx';
 import { Card, StatTile, Table, Badge, EmptyState, ErrorState, SkeletonLines } from '../components/ui/index.js';
@@ -113,6 +114,8 @@ export default function DashboardPage() {
         </div>
 
         {error && <ErrorState message={error} onRetry={load} />}
+
+        <PinnedSearchWidgets />
 
         {loading && !data.summary ? (
           <Card><SkeletonLines lines={4} /></Card>
