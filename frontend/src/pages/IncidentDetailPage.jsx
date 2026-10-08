@@ -9,6 +9,9 @@ import Storyline3DLazy from '../components/three/Storyline3DLazy.jsx';
 import AiInvestigationPanel from '../components/AiInvestigationPanel.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
 import SimilarIncidentsPanel from '../components/SimilarIncidentsPanel.jsx';
+import MagnitudePanel from '../components/MagnitudePanel.jsx';
+import OffenseCasePanel from '../components/OffenseCasePanel.jsx';
+import { getOffense } from '../services/offenses.service.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   getIncident, getRisk, getTimeline, getEvidence, getGraph, updateStatus, setFeedback,
@@ -26,7 +29,7 @@ const NEXT_STATUS = {
 export default function IncidentDetailPage() {
   const { id } = useParams();
   const { hasRole } = useAuth();
-  const [data, setData] = useState({ incident: null, risk: null, timeline: [], evidence: null, graph: null });
+  const [data, setData] = useState({ incident: null, risk: null, timeline: [], evidence: null, graph: null, offense: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [highlighted, setHighlighted] = useState([]);
@@ -35,10 +38,10 @@ export default function IncidentDetailPage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [detail, risk, timeline, evidence, graph] = await Promise.all([
-        getIncident(id), getRisk(id), getTimeline(id), getEvidence(id), getGraph(id),
+      const [detail, risk, timeline, evidence, graph, offense] = await Promise.all([
+        getIncident(id), getRisk(id), getTimeline(id), getEvidence(id), getGraph(id), getOffense(id),
       ]);
-      setData({ incident: detail.incident, risk, timeline, evidence, graph });
+      setData({ incident: detail.incident, risk, timeline, evidence, graph, offense });
     } catch (e) {
       setError(messageFromError(e));
     } finally {
@@ -64,7 +67,7 @@ export default function IncidentDetailPage() {
           {inc && (
             <>
               <div className="brand-row" style={{ justifyContent: 'space-between' }}>
-                <h2>Incident #{inc.id}: {inc.title}</h2>
+                <h2>Offense #{inc.id}: {inc.title}</h2>
                 <SeverityBadge severity={inc.severity} />
               </div>
               <p className="subtitle">Status: <strong>{inc.status}</strong> · Feedback: {inc.feedback}</p>
@@ -77,6 +80,24 @@ export default function IncidentDetailPage() {
                   <button className="ghost" onClick={() => giveFeedback('TRUE_POSITIVE')}>Mark true positive</button>
                   <button className="ghost" onClick={() => giveFeedback('FALSE_POSITIVE')}>Mark false positive</button>
                 </div>
+              )}
+
+              <MagnitudePanel magnitude={data.offense?.offense.magnitude} />
+
+              {data.offense?.threatIntel?.length > 0 && (
+                <section className="panel">
+                  <h3>Threat intelligence matches</h3>
+                  <ul className="breakdown">
+                    {data.offense.threatIntel.map((m) => (
+                      <li key={`${m.ip}-${m.list}`}><code>{m.ip}</code><span className="chip">{m.list}</span></li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {data.offense && (
+                <OffenseCasePanel offense={data.offense.offense} notes={data.offense.notes}
+                  canEdit={canTriage} onChanged={load} />
               )}
 
               {canTriage && (

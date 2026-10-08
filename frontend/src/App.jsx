@@ -18,6 +18,7 @@ const AdminRiskPage = lazy(() => import('./pages/AdminRiskPage.jsx'));
 const PipelinePage = lazy(() => import('./pages/PipelinePage.jsx'));
 const LogSourcesPage = lazy(() => import('./pages/LogSourcesPage.jsx'));
 const RulesPage = lazy(() => import('./pages/RulesPage.jsx'));
+const OffensesPage = lazy(() => import('./pages/OffensesPage.jsx'));
 
 const admin = (el) => <ProtectedRoute roles={['ADMIN']}>{el}</ProtectedRoute>;
 const analyst = (el) => <ProtectedRoute roles={['ANALYST', 'ADMIN']}>{el}</ProtectedRoute>;
@@ -35,6 +36,8 @@ export default function App() {
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/incidents" element={<IncidentsPage />} />
         <Route path="/incidents/:id" element={<IncidentDetailPage />} />
+        <Route path="/offenses" element={<OffensesPage />} />
+        <Route path="/offenses/:id" element={<IncidentDetailPage />} />
         <Route path="/evaluation" element={<EvaluationPage />} />
         <Route path="/sites" element={<SitesPage />} />
         <Route path="/log-sources" element={analyst(<LogSourcesPage />)} />
