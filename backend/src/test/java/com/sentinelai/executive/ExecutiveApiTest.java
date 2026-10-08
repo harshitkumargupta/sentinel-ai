@@ -21,6 +21,9 @@ class ExecutiveApiTest extends IntegrationTestSupport {
 
     @Test
     void metricsScoreSummaryAndPdf() throws Exception {
+        // other test classes leave coverage runs / vulnerabilities behind; the score depends on both
+        jdbc.update("delete from coverage_runs");
+        jdbc.update("delete from vulnerabilities");
         jdbc.update("insert into incidents (org_id,title,status,severity,risk_score,created_at) values (1,'Root brute force','OPEN','CRITICAL',90,now(6) - interval 2 hour)");
         jdbc.update("insert into incidents (org_id,title,status,severity,risk_score,created_at) values (1,'Port scan','OPEN','HIGH',60,now(6) - interval 1 hour)");
         jdbc.update("insert into incidents (org_id,title,status,severity,risk_score,created_at,resolved_at) values (1,'Old phish','RESOLVED','MEDIUM',30,now(6) - interval 3 hour,now(6) - interval 1 hour)");
