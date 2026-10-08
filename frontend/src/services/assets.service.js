@@ -34,3 +34,20 @@ export async function relinkAssets() {
   const { data } = await api.post('/assets/relink');
   return data.data;
 }
+
+export async function listVulnerabilities(assetId) {
+  const { data } = await api.get('/vulnerabilities', { params: assetId ? { assetId } : {} });
+  return data.data;
+}
+
+export async function importVulnerabilities(file) {
+  const form = new FormData();
+  form.append('file', file);
+  const { data } = await api.post('/vulnerabilities/import', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  return data.data;
+}
+
+export async function setVulnerabilityStatus(id, status) {
+  const { data } = await api.patch(`/vulnerabilities/${id}/status`, { status });
+  return data.data;
+}

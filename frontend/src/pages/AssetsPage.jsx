@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../components/ui/index.js';
 import {
   ASSET_TYPES, ENVIRONMENTS, CRITICALITIES, listAssets, getAsset, saveAsset, deleteAsset, importAssets, relinkAssets,
+  listVulnerabilities, importVulnerabilities, setVulnerabilityStatus,
 } from '../services/assets.service.js';
 import { statusLabel } from '../services/caseLabels.js';
 import { messageFromError } from '../services/errors.js';
@@ -24,6 +25,22 @@ export default function AssetsPage() {
   const [editingId, setEditingId] = useState(null);
   const [open, setOpen] = useState(null); // { asset, incidents }
   const [importResult, setImportResult] = useState(null);
+  const [vulnResult, setVulnResult] = useState(null);
+
+  async function openAsset(a) {
+    if (open?.asset.id === a.id) { setOpen(null); return; }
+    try {
+      const [detail, vulns] = await Promise.all([getAsset(a.id), listVulnerabilities(a.id)]);
+      setOpen({ ...detail, vulns });
+    } catch (e) { setError(messageFromError(e)); }
+  }
+
+  async function onVulnImport(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try { setVulnResult(await importVulnerabilities(file)); load(); } catch (err) { setError(messageFromError(err)); }
+  }
 
   const load = useCallback(async () => {
     try { setAssets(await listAssets()); setError(null); } catch (e) { setError(messageFromError(e)); }
@@ -78,9 +95,7 @@ export default function AssetsPage() {
                 <td className={a.openIncidents > 0 ? 'error-text' : ''}>{a.openIncidents}</td>
                 <td className={a.openVulnerabilities > 0 ? 'error-text' : ''}>{a.openVulnerabilities}</td>
                 <td>
-                  <button className="ghost" onClick={async () => {
-                    try { setOpen(open?.asset.id === a.id ? null : await getAsset(a.id)); } catch (e) { setError(messageFromError(e)); }
-                  }}>{open?.asset.id === a.id ? 'Close' : 'Details'}</button>
+                  <button className="ghost" onClick={() => openAsset(a)}>{open?.asset.id === a.id ? 'Close' : 'Details'}</button>
                   {canEdit && <button className="ghost" onClick={() => edit(a)}>Edit</button>}
                   {isAdmin && <button className="ghost" onClick={() => remove(a)}>Delete</button>}
                 </td>
@@ -93,6 +108,27 @@ export default function AssetsPage() {
       {open && (
         <section className="panel">
           <h3>{open.asset.hostname || open.asset.ip} — incidents</h3>
+          <h4>Vulnerabilities ({open.vulns.length})</h4>
+          {open.vulns.length === 0 ? <p className="muted small">No findings imported for this asset.</p> : (
+            <table className="data-table">
+              <thead><tr><th>CVE</th><th>Severity</th><th>Description</th><th>Status</th>{canEdit && <th></th>}</tr></thead>
+              <tbody>
+                {open.vulns.map((v) => (
+                  <tr key={v.id}>
+                    <td><code>{v.cveId}</code></td><td><SeverityBadge severity={v.severity} /></td>
+                    <td className="small">{v.description || '—'}</td><td>{v.status}</td>
+                    {canEdit && <td><button className="ghost" onClick={async () => {
+                      try {
+                        await setVulnerabilityStatus(v.id, v.status === 'OPEN' ? 'FIXED' : 'OPEN');
+                        setOpen({ ...open, vulns: await listVulnerabilities(open.asset.id) }); load();
+                      } catch (e) { setError(messageFromError(e)); }
+                    }}>{v.status === 'OPEN' ? 'Mark fixed' : 'Reopen'}</button></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <h4>Incidents</h4>
           {open.incidents.length === 0 ? <p className="muted">No incidents involve this asset.</p> : (
             <ul className="breakdown">
               {open.incidents.map((i) => (
@@ -142,6 +178,14 @@ export default function AssetsPage() {
               try { push(`Linked ${await relinkAssets()} event(s) to assets`, { variant: 'success' }); load(); } catch (e) { setError(messageFromError(e)); }
             }}>Relink stored events</button>}
           </div>
+          <h4>Vulnerability scan (CSV)</h4>
+          <p className="muted small">Header <code>host, cve_id, severity, description</code>; host = asset hostname or IP.
+            Sample: <code>backend/src/main/resources/samples/vulnerabilities.csv</code>. Open findings add to incident risk.</p>
+          <input type="file" accept=".csv,.txt" onChange={onVulnImport} aria-label="Vulnerability CSV" />
+          {vulnResult && (
+            <p className="small">Created {vulnResult.created}, updated {vulnResult.updated}, unmatched hosts {vulnResult.unmatched}.
+              {vulnResult.errors.length > 0 && <span className="error-text"> {vulnResult.errors.join('; ')}</span>}</p>
+          )}
           {importResult && (
             <p className="small">Created {importResult.created}, updated {importResult.updated}, skipped {importResult.skipped},
               linked {importResult.relinkedEvents} stored event(s).

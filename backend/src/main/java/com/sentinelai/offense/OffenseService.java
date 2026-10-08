@@ -17,6 +17,7 @@ import com.sentinelai.incident.domain.IncidentStatus;
 import com.sentinelai.incident.repository.IncidentAlertRepository;
 import com.sentinelai.incident.repository.IncidentEventRepository;
 import com.sentinelai.incident.repository.IncidentRepository;
+import com.sentinelai.offense.web.OffenseDtos.AffectedAsset;
 import com.sentinelai.offense.web.OffenseDtos.Assignee;
 import com.sentinelai.offense.web.OffenseDtos.NoteView;
 import com.sentinelai.offense.web.OffenseDtos.OffenseDetail;
@@ -65,6 +66,7 @@ public class OffenseService {
     private final ObjectProvider<ThreatIntelSignal> threatIntel;
     private final AuditService auditService;
     private final TimelineService timeline;
+    private final com.sentinelai.vuln.VulnerabilityService vulnerabilities;
     private final Clock clock;
 
     public enum SortBy { MAGNITUDE, RECENT }
@@ -104,7 +106,15 @@ public class OffenseService {
         List<EventResponse> events = l.events().stream()
                 .sorted(Comparator.comparing(SecurityEvent::getEventTimestamp).reversed())
                 .limit(MAX_EVENTS_IN_DETAIL).map(EventResponse::from).toList();
-        return new OffenseDetail(summarize(l, sourceNames(actor.getOrgId())), l.intel(), events, notes(id, actor));
+        List<AffectedAsset> assets = l.events().stream().map(SecurityEvent::getAsset).filter(Objects::nonNull)
+                .collect(Collectors.toMap(a -> a.getId(), a -> a, (a, b) -> a)).values().stream()
+                .sorted(Comparator.comparing(a -> -a.getCriticality().level()))
+                .map(a -> new AffectedAsset(a.getId(), a.label(), a.getCriticality().name(), a.getType().name(),
+                        a.getEnvironment().name(), a.getOwner(),
+                        vulnerabilities.list(actor.getOrgId(), a.getId()).stream()
+                                .filter(v -> v.status() == com.sentinelai.vuln.Vulnerability.Status.OPEN).toList()))
+                .toList();
+        return new OffenseDetail(summarize(l, sourceNames(actor.getOrgId())), l.intel(), events, notes(id, actor), assets);
     }
 
     @Transactional(readOnly = true)

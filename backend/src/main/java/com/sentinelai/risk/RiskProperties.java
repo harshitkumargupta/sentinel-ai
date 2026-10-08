@@ -40,6 +40,8 @@ public class RiskProperties {
 
     private int assetCriticalityPerLevel = 8;
     private int assetCriticalityCap = 32;
+    /** Max points from open vulnerabilities on the incident's assets. */
+    private int vulnerabilityCap = 20;
 
     private int honeytokenPoints = 60;
 

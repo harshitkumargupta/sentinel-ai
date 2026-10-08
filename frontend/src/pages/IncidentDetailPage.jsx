@@ -14,6 +14,7 @@ import MagnitudePanel from '../components/MagnitudePanel.jsx';
 import OffenseCasePanel from '../components/OffenseCasePanel.jsx';
 import { getOffense } from '../services/offenses.service.js';
 import CaseTimeline from '../components/CaseTimeline.jsx';
+import AffectedAssetsPanel from '../components/AffectedAssetsPanel.jsx';
 import { NEXT_STATUS, statusLabel } from '../services/caseLabels.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
@@ -80,6 +81,8 @@ export default function IncidentDetailPage() {
               )}
 
               <MagnitudePanel magnitude={data.offense?.offense.magnitude} />
+
+              <AffectedAssetsPanel assets={data.offense?.assets} />
 
               {data.offense?.threatIntel?.length > 0 && (
                 <section className="panel">

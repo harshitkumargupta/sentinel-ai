@@ -23,7 +23,12 @@ public final class OffenseDtos {
     }
 
     public record OffenseDetail(OffenseSummary offense, List<ThreatIntelSignal.Match> threatIntel,
-                                List<EventResponse> events, List<NoteView> notes) {
+                                List<EventResponse> events, List<NoteView> notes, List<AffectedAsset> assets) {
+    }
+
+    /** An inventoried asset touched by the offense, with its open vulnerabilities. */
+    public record AffectedAsset(Long id, String label, String criticality, String type, String environment,
+                                String owner, List<com.sentinelai.vuln.VulnerabilityService.VulnView> vulnerabilities) {
     }
 
     public record OffensePage(List<OffenseSummary> content, int page, int size, long totalElements, int totalPages) {
