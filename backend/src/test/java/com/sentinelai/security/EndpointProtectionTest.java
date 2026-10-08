@@ -32,6 +32,7 @@ class EndpointProtectionTest extends IntegrationTestSupport {
             "/api/health",
             "/api/auth/login",
             "/api/auth/refresh",
+            "/api/public/demo",
             "/actuator/health",
             "/actuator/health/**",
             "/actuator/info",

@@ -75,7 +75,8 @@ public class IncidentContextBuilder {
                     field(e.getResource()),
                     field(e.getUserAgent()),
                     e.getGeoCountry(),
-                    e.getEventTimestamp() == null ? null : e.getEventTimestamp().toString()));
+                    e.getEventTimestamp() == null ? null : e.getEventTimestamp().toString(),
+                    field(hostOf(e))));
         }
 
         // MITRE tags from the incident's alerts.
@@ -106,6 +107,11 @@ public class IncidentContextBuilder {
                 eventSummaries, timeline, eventIds);
 
         return new BuiltContext(context, hash(context), injectionHits);
+    }
+
+    private static String hostOf(SecurityEvent e) {
+        String key = e.getEntityKey();
+        return key != null && key.startsWith("host:") ? key.substring("host:".length()) : null;
     }
 
     private String field(String raw) {

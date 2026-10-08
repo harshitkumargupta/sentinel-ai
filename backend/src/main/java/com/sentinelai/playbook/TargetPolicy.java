@@ -53,6 +53,17 @@ public class TargetPolicy {
         return new Blast(users.size(), admins);
     }
 
+    public boolean isProtectedHost(String host) {
+        return host != null && props.getProtectedHosts().stream().anyMatch(h -> h.equalsIgnoreCase(host));
+    }
+
+    /** Blast radius for isolating a host: distinct users seen on it, and how many are admins. */
+    public Blast blastForHost(Long orgId, String host) {
+        List<String> users = eventRepository.distinctUsernamesByOrgAndEntityKey(orgId, "host:" + host);
+        int admins = (int) users.stream().filter(this::isAdminUser).count();
+        return new Blast(users.size(), admins);
+    }
+
     /** Blast radius for a user action: one user, possibly an admin. */
     public Blast blastForUser(String username) {
         return new Blast(1, isAdminUser(username) ? 1 : 0);

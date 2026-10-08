@@ -72,8 +72,8 @@ services:
       REDIS_ENABLED: "true"
       REDIS_HOST: redis
       KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
-      AI_ENABLED: "${AI_ENABLED:-false}"
-      AI_PROVIDER: ${AI_PROVIDER:-fake}
+      AI_ENABLED: "${AI_ENABLED:-true}"
+      AI_PROVIDER: ${AI_PROVIDER:-local}
       LLM_API_KEY: ${LLM_API_KEY:-}
     depends_on:
       mysql:

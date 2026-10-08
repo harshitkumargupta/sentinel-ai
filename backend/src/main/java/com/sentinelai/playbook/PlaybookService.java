@@ -89,6 +89,16 @@ public class PlaybookService {
         this.clock = clock;
     }
 
+    /** Recommendation verbs that map onto a differently-named action ({@code monitor} → watchlist). */
+    public static String actionTypeFor(String recommendation) {
+        return "monitor".equals(recommendation) ? "add_watchlist" : recommendation;
+    }
+
+    /** True when an action handler is registered for this type. */
+    public boolean supports(String actionType) {
+        return actions.containsKey(actionType);
+    }
+
     @Transactional(readOnly = true)
     public List<PlaybookActionResponse> listForIncident(Long incidentId, AppUserPrincipal actor) {
         return repository.findByIncident_IdOrderByIdDesc(incidentId).stream()
@@ -120,7 +130,7 @@ public class PlaybookService {
         if (highRisk && actor.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("HIGH/CRITICAL actions require an ADMIN approver");
         }
-        if (highRisk && action.getProposedBy() != null
+        if (highRisk && props.isRequireDistinctApprover() && action.getProposedBy() != null
                 && action.getProposedBy().getId().equals(actor.getUserId())) {
             throw new AccessDeniedException("The approver must differ from the proposer for HIGH/CRITICAL actions");
         }
@@ -289,7 +299,7 @@ public class PlaybookService {
         return userRepository.getReferenceById(actor.getUserId());
     }
 
-    private PlaybookActionResponse toResponse(PlaybookAction action) {
+    public PlaybookActionResponse toResponse(PlaybookAction action) {
         ResponseAction impl = actions.get(action.getActionType());
         return PlaybookActionResponse.from(action, objectMapper, impl != null && impl.destructive());
     }

@@ -31,11 +31,12 @@ public class PlaybookProperties {
 
     /** Action types treated as destructive (require the stricter approval path). */
     private Set<String> destructiveActions =
-            Set.of("block_ip", "disable_user", "force_password_reset", "revoke_sessions");
+            Set.of("block_ip", "disable_user", "force_password_reset", "revoke_sessions", "isolate_host");
 
     /** Allow-list: only these action types may ever execute. A destructive action not here is refused. */
     private Set<String> allowedActions =
-            Set.of("block_ip", "disable_user", "force_password_reset", "revoke_sessions", "add_watchlist");
+            Set.of("block_ip", "disable_user", "force_password_reset", "revoke_sessions", "add_watchlist",
+                    "isolate_host");
 
     /** Protected networks — IPs in these CIDRs can never be blocked (internal network + loopback). */
     private List<String> protectedCidrs =
@@ -43,6 +44,15 @@ public class PlaybookProperties {
 
     /** Additional individual protected IPs (e.g. gateways, scanners). */
     private List<String> protectedIps = List.of();
+
+    /** Hosts that can never be isolated (e.g. domain controllers, the SIEM itself). */
+    private List<String> protectedHosts = List.of();
+
+    /**
+     * HIGH/CRITICAL actions normally need a second admin (approver ≠ proposer). The demo profile turns
+     * this off so a single presenter can run the whole flow; the ADMIN-role and admin-risk checks stay.
+     */
+    private boolean requireDistinctApprover = true;
 
     public boolean isDestructive(String actionType) {
         return destructiveActions.contains(actionType);

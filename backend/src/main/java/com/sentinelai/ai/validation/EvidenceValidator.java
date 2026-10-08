@@ -31,7 +31,7 @@ public class EvidenceValidator {
 
     /** The only response actions the model may propose. */
     public static final Set<String> ALLOWED_ACTIONS =
-            Set.of("block_ip", "disable_user", "force_password_reset", "monitor");
+            Set.of("block_ip", "disable_user", "force_password_reset", "isolate_host", "monitor");
 
     private final AiProperties props;
 
@@ -108,6 +108,9 @@ public class EvidenceValidator {
             }
             if (e.username() != null) {
                 targets.add(e.username());
+            }
+            if (e.host() != null) {
+                targets.add(e.host());
             }
         }
         if (ctx.entity() != null && ctx.entity().value() != null) {

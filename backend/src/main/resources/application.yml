@@ -108,10 +108,12 @@ sentinel:
     max-threshold-delta: 5
   ai:
     # Master feature flag. Off → every AI feature returns a deterministic fallback, no LLM contacted.
-    enabled: ${AI_ENABLED:false}
-    # 'fake' (deterministic) or 'http' (OpenAI-compatible). The API key comes ONLY from LLM_API_KEY.
-    provider: ${AI_PROVIDER:fake}
-    model: ${AI_MODEL:fake-model}
+    # On by default: the default provider is the offline 'local' engine (no key, no network).
+    enabled: ${AI_ENABLED:true}
+    # 'local' (offline rule/template engine, default), 'fake' (test stub) or 'http' (OpenAI-compatible;
+    # the API key comes ONLY from LLM_API_KEY).
+    provider: ${AI_PROVIDER:local}
+    model: ${AI_MODEL:sentinel-local-v1}
     base-url: ${AI_BASE_URL:https://api.openai.com/v1}
     timeout-ms: 20000
     max-tokens: 1200

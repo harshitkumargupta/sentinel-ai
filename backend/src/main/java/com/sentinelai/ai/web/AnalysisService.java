@@ -10,6 +10,7 @@ import com.sentinelai.auth.repository.UserRepository;
 import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.exception.NotFoundException;
 import com.sentinelai.playbook.PlaybookProperties;
+import com.sentinelai.playbook.PlaybookService;
 import com.sentinelai.playbook.domain.PlaybookAction;
 import com.sentinelai.playbook.domain.PlaybookActionStatus;
 import com.sentinelai.playbook.repository.PlaybookActionRepository;
@@ -96,7 +97,7 @@ public class AnalysisService {
             playbookActionRepository.save(PlaybookAction.builder()
                     .incident(analysis.getIncident())
                     .proposedBy(userRepository.getReferenceById(actor.getUserId()))
-                    .actionType(r.action())
+                    .actionType(PlaybookService.actionTypeFor(r.action()))
                     .targetRef(r.target())
                     .reason(r.reason())
                     .analysisId(analysis.getId())

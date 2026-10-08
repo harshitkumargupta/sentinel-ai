@@ -81,6 +81,13 @@ public class RiskProperties {
         m.put("T1078", 15);       // valid accounts (access)
         m.put("T1078.001", 20);   // default/compromised accounts
         m.put("T1548", 20);       // privilege escalation (late)
+        m.put("T1046", 3);        // discovery (recon)
+        m.put("T1190", 10);       // initial access via public-facing app
+        m.put("T1566.002", 10);   // initial access via phishing link
+        m.put("T1204.002", 15);   // execution of a malicious file
+        m.put("T1068", 20);       // privilege escalation via exploitation
+        m.put("T1048", 25);       // exfiltration (final stage)
+        m.put("T1498", 10);       // network denial of service
         return m;
     }
 }
