@@ -2,6 +2,7 @@ package com.sentinelai.ingestion.normalize;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sentinelai.common.domain.Severity;
+import com.sentinelai.event.domain.EventOutcome;
 import com.sentinelai.event.domain.EventType;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +28,7 @@ public class GenericJsonNormalizer implements EventNormalizer {
         return NormalizedEvent.builder()
                 .eventType(eventType(raw, "eventType", EventType.OTHER))
                 .severity(severity(raw, "severity", Severity.LOW))
+                .outcome(EventOutcome.parse(text(raw, "outcome")))
                 .sourceIp(text(raw, "sourceIp"))
                 .username(text(raw, "username"))
                 .userAgent(text(raw, "userAgent"))

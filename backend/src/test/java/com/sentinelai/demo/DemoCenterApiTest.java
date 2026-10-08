@@ -123,6 +123,24 @@ class DemoCenterApiTest extends IntegrationTestSupport {
     }
 
     @Test
+    void replayStreamsSampleThroughParsersAndResetRemovesIt() throws Exception {
+        JsonNode replay = postJson("/api/demo/replay/auth_log");
+        assertThat(replay.path("report").path("accepted").asInt()).isEqualTo(32);
+        assertThat(replay.path("report").path("parseErrors").asInt()).isEqualTo(1);
+        assertThat(replay.path("rulesFired").toString()).contains("BRUTE_FORCE").contains("CREDENTIAL_STUFFING");
+        assertThat(replay.path("incidentIds").size()).isPositive();
+        Instant newest = securityEventRepository.findAll().stream().map(SecurityEvent::getEventTimestamp)
+                .max(Comparator.naturalOrder()).orElseThrow();
+        assertThat(Duration.between(newest, Instant.now()).abs()).isLessThan(Duration.ofMinutes(1));
+
+        mockMvc.perform(post("/api/demo/replay/nope").header("Authorization", admin)).andExpect(status().isNotFound());
+
+        postJson("/api/demo/reset");
+        assertThat(securityEventRepository.count()).isZero();
+        assertThat(incidentRepository.count()).isZero();
+    }
+
+    @Test
     void unknownScenarioIs404AndNonAdminIsForbidden() throws Exception {
         mockMvc.perform(post("/api/demo/scenarios/no_such_thing/run").header("Authorization", admin))
                 .andExpect(status().isNotFound());

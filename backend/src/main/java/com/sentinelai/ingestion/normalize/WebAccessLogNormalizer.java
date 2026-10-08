@@ -2,6 +2,7 @@ package com.sentinelai.ingestion.normalize;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sentinelai.common.domain.Severity;
+import com.sentinelai.event.domain.EventOutcome;
 import com.sentinelai.event.domain.EventType;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,7 @@ public class WebAccessLogNormalizer implements EventNormalizer {
         return NormalizedEvent.builder()
                 .eventType(type)
                 .severity(severity)
+                .outcome(status >= 400 ? EventOutcome.FAILURE : EventOutcome.SUCCESS)
                 .sourceIp(text(raw, "sourceIp"))
                 .username(text(raw, "username"))
                 .userAgent(text(raw, "userAgent"))

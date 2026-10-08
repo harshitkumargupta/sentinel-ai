@@ -10,10 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * Removes simulator-generated data only: events labelled in {@code sim_labels}, alerts whose
- * {@code run_id} is a simulator run, and incidents made <em>entirely</em> of such alerts (plus their
- * actions, analyses and notifications, which reference incidents with RESTRICT). Users, rules,
- * sites, real ingested events and the audit log are never touched.
+ * Removes demo data only: simulator events (labelled in {@code sim_labels}) and replayed sample events
+ * (client id {@code replay:*}), alerts from simulator runs or replays ({@code run_id} =
+ * a simulator run or {@code replay-*}), and incidents made <em>entirely</em> of such alerts (plus their
+ * actions, analyses and notifications, which reference incidents with RESTRICT). Users, rules, log
+ * sources, real ingested/uploaded events and the audit log are never touched.
  */
 @Slf4j
 @Component
@@ -34,11 +35,12 @@ public class DemoDataCleaner {
                 join alerts a on a.id = ia.alert_id
                 join incidents i on i.id = ia.incident_id
                 where i.org_id = :org
-                  and a.run_id in (select run_id from simulator_runs)
+                  and (a.run_id in (select run_id from simulator_runs) or a.run_id like 'replay-%')
                   and not exists (
                       select 1 from incident_alerts ia2 join alerts a2 on a2.id = ia2.alert_id
                       where ia2.incident_id = ia.incident_id
-                        and (a2.run_id is null or a2.run_id not in (select run_id from simulator_runs)))
+                        and (a2.run_id is null
+                             or (a2.run_id not in (select run_id from simulator_runs) and a2.run_id not like 'replay-%')))
                 """, p, Long.class);
 
         int incidents = 0;
@@ -50,11 +52,13 @@ public class DemoDataCleaner {
             incidents = jdbc.update("delete from incidents where id in (:ids)", ids); // cascades links + timeline
         }
         int alerts = jdbc.update("""
-                delete from alerts where org_id = :org and run_id in (select run_id from simulator_runs)
+                delete from alerts where org_id = :org
+                  and (run_id in (select run_id from simulator_runs) or run_id like 'replay-%')
                 """, p);
         int events = jdbc.update("""
                 delete from security_events where org_id = :org
-                  and id in (select event_id from (select event_id from sim_labels) l)
+                  and (id in (select event_id from (select event_id from sim_labels) l)
+                       or client_event_id like 'replay:%')
                 """, p); // sim_labels rows cascade
         int runs = jdbc.update("""
                 delete from simulator_runs where run_id not in (select run_id from (select distinct run_id from sim_labels) l)

@@ -6,6 +6,8 @@ import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.exception.BadRequestException;
 import com.sentinelai.common.exception.NotFoundException;
 import com.sentinelai.common.repository.OrganizationRepository;
+import com.sentinelai.ingestion.parse.LogFormat;
+import com.sentinelai.ingestion.parse.LogIngestService;
 import com.sentinelai.logsource.web.LogSourceDtos.CreateLogSourceRequest;
 import com.sentinelai.logsource.web.LogSourceDtos.CreatedLogSource;
 import com.sentinelai.logsource.web.LogSourceDtos.Health;
@@ -49,6 +51,7 @@ public class LogSourceService {
     private final LogSourceStats stats;
     private final LogSourceProperties properties;
     private final AuditService auditService;
+    private final LogIngestService logIngestService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -109,6 +112,25 @@ public class LogSourceService {
         }
         audit(actor, "LOG_SOURCE_DELETE", site, "{\"name\":\"" + site.getName().replace("\"", "'") + "\"}");
         siteRepository.delete(site);
+    }
+
+    /** The parser a source's raw lines go through when the sender doesn't name one. */
+    @Transactional(readOnly = true)
+    public LogFormat defaultFormat(Long siteId) {
+        return siteRepository.findById(siteId).map(s -> LogFormat.defaultFor(s.getSourceType()))
+                .orElse(LogFormat.JSON_LINES);
+    }
+
+    /** Parse an uploaded log file for a source the actor's org owns (real data — never tagged as demo). */
+    public LogIngestService.Report upload(AppUserPrincipal actor, Long id, LogFormat format, List<String> lines) {
+        Site site = load(actor, id);
+        LogFormat f = format != null ? format : LogFormat.defaultFor(site.getSourceType());
+        LogIngestService.Report report = logIngestService.ingest(
+                new LogIngestService.Request(actor.getOrgId(), site.getId(), f, lines, null));
+        auditService.record(actor.getOrgId(), actor.getUserId(), "LOG_SOURCE_UPLOAD", "log_source", site.getId(),
+                "{\"format\":\"" + f + "\",\"lines\":" + report.lines() + ",\"accepted\":" + report.accepted()
+                        + ",\"parseErrors\":" + report.parseErrors() + "}", null);
+        return report;
     }
 
     /** Increment a source's parse-error counter (used by the ingest endpoints). */

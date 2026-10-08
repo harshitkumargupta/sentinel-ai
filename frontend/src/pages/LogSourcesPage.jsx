@@ -1,10 +1,13 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import DataState from '../components/DataState.jsx';
+import ParseReport from '../components/ParseReport.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
+import { emitDataChanged, useLiveRefresh } from '../hooks/useLiveRefresh.js';
 import {
-  SOURCE_TYPES, listLogSources, createLogSource, setLogSourceEnabled, rotateLogSourceKey, deleteLogSource,
+  SOURCE_TYPES, LOG_FORMATS, listLogSources, createLogSource, setLogSourceEnabled, rotateLogSourceKey,
+  deleteLogSource, uploadLogFile,
 } from '../services/logsources.service.js';
+import { getDemoInfo, listDatasets, replayDataset } from '../services/demo.service.js';
 import { messageFromError } from '../services/errors.js';
 
 const HEALTH_STYLE = {
@@ -30,12 +33,56 @@ export default function LogSourcesPage() {
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ name: '', type: 'WEB_SERVER', description: '' });
   const [newKey, setNewKey] = useState(null); // { name, apiKey } — shown once
+  const [upload, setUpload] = useState({ sourceId: '', format: '', file: null });
+  const [uploading, setUploading] = useState(false);
+  const [uploadReport, setUploadReport] = useState(null);
+  const [datasets, setDatasets] = useState([]);
+  const [replaying, setReplaying] = useState(null);
+  const [replayResult, setReplayResult] = useState(null);
 
   const load = useCallback(async () => {
     try { setSources(await listLogSources()); setError(null); } catch (e) { setError(messageFromError(e)); }
     finally { setLoading(false); }
   }, []);
   useLiveRefresh(load, 5000);
+
+  // Sample replay is a Demo Center feature: only offered when the server runs in demo mode.
+  useEffect(() => {
+    if (!isAdmin) return;
+    getDemoInfo()
+      .then((info) => (info.demoMode ? listDatasets().then(setDatasets) : null))
+      .catch(() => setDatasets([]));
+  }, [isAdmin]);
+
+  async function handleUpload(e) {
+    e.preventDefault();
+    if (!upload.file || !upload.sourceId) return;
+    setUploading(true);
+    setUploadReport(null);
+    try {
+      setUploadReport(await uploadLogFile(upload.sourceId, upload.file, upload.format));
+      emitDataChanged('upload');
+      await load();
+    } catch (err) {
+      setError(messageFromError(err));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleReplay(id) {
+    setReplaying(id);
+    setReplayResult(null);
+    try {
+      setReplayResult(await replayDataset(id));
+      emitDataChanged('replay');
+      await load();
+    } catch (err) {
+      setError(messageFromError(err));
+    } finally {
+      setReplaying(null);
+    }
+  }
 
   async function act(fn) {
     try { await fn(); await load(); } catch (e) { setError(messageFromError(e)); }
@@ -82,6 +129,55 @@ export default function LogSourcesPage() {
               <pre className="code-block">{ingestSnippet(newKey.apiKey)}</pre>
               <button className="ghost" onClick={() => setNewKey(null)}>I saved it — hide</button>
             </div>
+          )}
+        </section>
+      )}
+
+      <section className="panel">
+        <h3>Upload a log file</h3>
+        <p className="muted small">Parsed by format, normalized and run through detection. Max 1 MB per file.</p>
+        <form className="filters" onSubmit={handleUpload}>
+          <select value={upload.sourceId} required aria-label="Log source"
+            onChange={(e) => setUpload({ ...upload, sourceId: e.target.value })}>
+            <option value="">Choose a log source…</option>
+            {(sources ?? []).filter((s) => s.enabled).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <select value={upload.format} aria-label="Format" onChange={(e) => setUpload({ ...upload, format: e.target.value })}>
+            {LOG_FORMATS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+          <input type="file" accept=".log,.txt,.json,.jsonl,.csv" required aria-label="Log file"
+            onChange={(e) => setUpload({ ...upload, file: e.target.files?.[0] ?? null })} />
+          <button type="submit" disabled={uploading}>{uploading ? 'Parsing…' : 'Upload & ingest'}</button>
+        </form>
+        <ParseReport report={uploadReport} />
+      </section>
+
+      {datasets.length > 0 && (
+        <section className="panel">
+          <h3>Replay a sample dataset <span className="chip">demo</span></h3>
+          <p className="muted small">Streams a bundled log file through the parsers and pipeline, re-timed to now.
+            Removed by Demo Center → Reset Demo Data.</p>
+          <table className="data-table">
+            <thead><tr><th>Dataset</th><th>Format</th><th>Expected detections</th><th></th></tr></thead>
+            <tbody>
+              {datasets.map((d) => (
+                <tr key={d.id}>
+                  <td><strong>{d.label}</strong><div className="muted small">{d.description}</div></td>
+                  <td>{d.format}</td>
+                  <td>{d.expectedRules.length ? d.expectedRules.join(', ') : '—'}</td>
+                  <td><button disabled={replaying !== null} onClick={() => handleReplay(d.id)}>
+                    {replaying === d.id ? 'Replaying…' : 'Replay'}</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {replayResult && (
+            <>
+              <p>Replayed into <strong>{replayResult.sourceName}</strong>: {replayResult.alertsCreated} alert(s)
+                {replayResult.rulesFired.length > 0 && <> from {replayResult.rulesFired.join(', ')}</>},
+                {' '}{replayResult.incidentIds.length} incident(s).</p>
+              <ParseReport report={replayResult.report} />
+            </>
           )}
         </section>
       )}

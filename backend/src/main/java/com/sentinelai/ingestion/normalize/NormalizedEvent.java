@@ -16,6 +16,8 @@ import java.time.Instant;
 public class NormalizedEvent {
     private EventType eventType;
     private Severity severity;
+    /** Null = derive from the event type ({@link com.sentinelai.event.domain.EventOutcome#defaultFor}). */
+    private com.sentinelai.event.domain.EventOutcome outcome;
     private String sourceIp;
     private String username;
     private String userAgent;

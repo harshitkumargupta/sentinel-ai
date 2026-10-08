@@ -4,6 +4,8 @@ import com.sentinelai.auth.security.AppUserPrincipal;
 import com.sentinelai.common.web.ApiResponse;
 import com.sentinelai.demo.DemoDataCleaner;
 import com.sentinelai.demo.DemoService;
+import com.sentinelai.demo.SampleDatasets;
+import com.sentinelai.demo.SampleReplayService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,6 +32,7 @@ import java.util.List;
 public class DemoController {
 
     private final DemoService demoService;
+    private final SampleReplayService replayService;
 
     @GetMapping("/scenarios")
     public ApiResponse<List<DemoService.ScenarioView>> scenarios() {
@@ -50,6 +53,17 @@ public class DemoController {
     @PostMapping("/seed")
     public ApiResponse<DemoService.RunSummary> seed(@AuthenticationPrincipal AppUserPrincipal actor) {
         return ApiResponse.ok(demoService.seed(actor.getOrgId()));
+    }
+
+    @GetMapping("/datasets")
+    public ApiResponse<List<SampleDatasets.Dataset>> datasets() {
+        return ApiResponse.ok(replayService.datasets());
+    }
+
+    @PostMapping("/replay/{dataset}")
+    public ApiResponse<SampleReplayService.ReplayResult> replay(@PathVariable String dataset,
+                                                        @AuthenticationPrincipal AppUserPrincipal actor) {
+        return ApiResponse.ok(replayService.replay(actor.getOrgId(), actor.getUserId(), dataset));
     }
 
     @PostMapping("/reset")

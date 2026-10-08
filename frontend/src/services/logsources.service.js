@@ -31,3 +31,21 @@ export async function rotateLogSourceKey(id) {
 export async function deleteLogSource(id) {
   await api.delete(`/log-sources/${id}`);
 }
+
+export const LOG_FORMATS = [
+  { value: '', label: 'Auto (from source type)' },
+  { value: 'ACCESS_LOG', label: 'nginx / Apache access log' },
+  { value: 'AUTH_LOG', label: 'Linux auth.log' },
+  { value: 'JSON_LINES', label: 'JSON lines' },
+  { value: 'CSV', label: 'CSV (with header row)' },
+];
+
+export async function uploadLogFile(id, file, format) {
+  const form = new FormData();
+  form.append('file', file);
+  if (format) form.append('format', format);
+  const { data } = await api.post(`/log-sources/${id}/upload`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.data;
+}

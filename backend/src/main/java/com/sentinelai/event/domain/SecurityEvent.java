@@ -58,6 +58,11 @@ public class SecurityEvent {
     @Column(nullable = false, columnDefinition = "enum('LOW','MEDIUM','HIGH','CRITICAL')")
     private Severity severity;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "enum('SUCCESS','FAILURE','UNKNOWN')")
+    private EventOutcome outcome = EventOutcome.UNKNOWN;
+
     @Column(name = "source_ip", length = 45)
     private String sourceIp;
 

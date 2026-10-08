@@ -22,8 +22,8 @@ import java.util.Objects;
 
 /**
  * Thin Demo Center layer over the existing {@link SimulatorService}: runs one simulator scenario
- * re-timed to "now" (so it shows up live), seeds a 24h benign baseline, resets simulator data, and
- * summarizes what each run produced (alerts, rules, incidents) from the real pipeline's output.
+ * re-timed to "now" (so it shows up live), seeds a 24h benign baseline, resets demo data, and summarizes what each run produced (alerts, rules,
+ * incidents) from the real pipeline's output.
  */
 @Service
 @RequiredArgsConstructor

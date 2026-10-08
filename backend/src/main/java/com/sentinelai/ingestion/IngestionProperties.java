@@ -19,4 +19,8 @@ public class IngestionProperties {
     /** Max serialized raw payload size per event (bytes). */
     @Min(256)
     private int maxPayloadBytes = 16384;
+
+    /** Max lines per raw-log request (agent batch, file upload or replay). */
+    @Min(1)
+    private int maxLinesPerUpload = 20000;
 }

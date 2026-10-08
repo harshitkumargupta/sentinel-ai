@@ -3,6 +3,7 @@ package com.sentinelai.ingestion;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sentinelai.common.exception.BadRequestException;
 import com.sentinelai.common.repository.OrganizationRepository;
+import com.sentinelai.event.domain.EventOutcome;
 import com.sentinelai.event.domain.SecurityEvent;
 import com.sentinelai.event.event.SecurityEventCreatedEvent;
 import com.sentinelai.event.repository.SecurityEventRepository;
@@ -130,6 +131,7 @@ public class IngestionService {
                 .clientEventId(clientEventId)
                 .eventType(n.getEventType())
                 .severity(n.getSeverity())
+                .outcome(n.getOutcome() != null ? n.getOutcome() : EventOutcome.defaultFor(n.getEventType()))
                 .sourceIp(n.getSourceIp())
                 .username(n.getUsername())
                 .userAgent(n.getUserAgent())
