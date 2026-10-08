@@ -18,6 +18,7 @@ import com.sentinelai.incident.repository.IncidentAlertRepository;
 import com.sentinelai.incident.repository.IncidentEventRepository;
 import com.sentinelai.incident.repository.IncidentRepository;
 import com.sentinelai.notification.NotificationService;
+import com.sentinelai.notification.channel.IncidentNotificationEvent;
 import com.sentinelai.risk.RiskResult;
 import com.sentinelai.risk.RiskService;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Default {@link Correlator}: groups alerts into incidents by entity (user/IP) within a time window,
@@ -137,6 +140,12 @@ public class CorrelationService implements Correlator {
             escalate(incident, notify);
         }
         events.publishEvent(new IncidentsChangedEvent(orgId));
+        if (created || escalated) {
+            Set<String> ruleTypes = incidentAlertRepository.findById_IncidentId(incident.getId()).stream()
+                    .map(ia -> ia.getAlert().getRuleType()).collect(Collectors.toSet());
+            events.publishEvent(new IncidentNotificationEvent(orgId, incident.getId(), incident.getTitle(),
+                    incident.getSeverity(), incident.getRiskScore() == null ? 0 : incident.getRiskScore(), created, ruleTypes));
+        }
         return new CorrelationOutcome(incident, created, escalated);
     }
 

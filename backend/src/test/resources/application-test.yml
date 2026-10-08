@@ -37,6 +37,9 @@ sentinel:
     enabled: false   # default; Redis integration tests enable it explicitly
   kafka:
     enabled: false   # default; Kafka integration tests enable it explicitly
+  notifications:
+    backoff-ms: 10          # fast retries in tests
+    webhook-timeout-ms: 500
   reports:
     scheduler-enabled: false   # tests drive ReportScheduleService.runDue() directly
   ai:

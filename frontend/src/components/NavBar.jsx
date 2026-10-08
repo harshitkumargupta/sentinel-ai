@@ -6,6 +6,7 @@ import { useTheme } from '../theme/ThemeProvider.jsx';
 import CommandPalette from './CommandPalette.jsx';
 import ThreatCoreLazy from './three/ThreatCoreLazy.jsx';
 import AiModeBadge from './AiModeBadge.jsx';
+import NotificationBell from './NotificationBell.jsx';
 import { getDemoInfo } from '../services/demo.service.js';
 
 const NAV = [
@@ -23,6 +24,7 @@ const NAV = [
   { to: '/log-sources', label: 'Log Sources', icon: '⇲', roles: ['ANALYST', 'ADMIN'] },
   { to: '/sites', label: 'Sites', icon: '⌂' },
   { to: '/demo-center', label: 'Demo Center', icon: '▶', role: 'ADMIN', demoOnly: true },
+  { to: '/notifications', label: 'Notifications', icon: '✉', role: 'ADMIN' },
   { to: '/admin', label: 'Admin', icon: '⚙', role: 'ADMIN' },
   { to: '/admin-risk', label: 'Admin Risk', icon: '⚖', role: 'ADMIN' },
   { to: '/pipeline', label: 'Pipeline', icon: '⇄', role: 'ADMIN' },
@@ -112,7 +114,7 @@ export default function NavBar() {
           <select className="shell-site" aria-label="Site selector" defaultValue="all">
             <option value="all">All sites</option>
           </select>
-          <button className="ui-btn ui-btn--ghost ui-btn--icon" aria-label="Notifications" title="Notifications">🔔</button>
+          <NotificationBell />
           <select className="shell-site" aria-label="3D quality" value={quality}
             onChange={(e) => setQuality(e.target.value)} title="3D visual quality">
             <option value="high">3D: High</option>
