@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
 import { useNavigate } from 'react-router-dom';
 import TuningCard from '../components/TuningCard.jsx';
 import ThreatCoreLazy from '../components/three/ThreatCoreLazy.jsx';
@@ -63,6 +64,8 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  // Reload immediately when a scenario/upload/action announces new data (unless paused).
+  useLiveRefresh(() => { if (!paused) load(); }, 0);
   useEffect(() => {
     if (paused) return undefined;
     const t = setInterval(load, REFRESH_MS);

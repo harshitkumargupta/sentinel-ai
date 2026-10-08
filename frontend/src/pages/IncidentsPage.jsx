@@ -4,6 +4,7 @@ import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import { listIncidents } from '../services/incidents.service.js';
 import { messageFromError } from '../services/errors.js';
+import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
 
 const STATUSES = ['OPEN', 'INVESTIGATING', 'CONTAINED', 'RESOLVED', 'FALSE_POSITIVE'];
 const SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
@@ -14,17 +15,19 @@ export default function IncidentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const [tick, setTick] = useState(0);
+  useLiveRefresh(() => setTick((t) => t + 1), 10000);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    if (tick === 0) setLoading(true);
     const clean = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
     listIncidents({ ...clean, size: 50 })
       .then((d) => active && setPage(d))
       .catch((e) => active && setError(messageFromError(e)))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [filters]);
+  }, [filters, tick]);
 
   const rows = page?.content ?? [];
 

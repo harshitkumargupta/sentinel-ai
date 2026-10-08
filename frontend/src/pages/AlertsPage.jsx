@@ -1,30 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import MitreChip from '../components/MitreChip.jsx';
 import { listAlerts } from '../services/alerts.service.js';
 import { messageFromError } from '../services/errors.js';
+import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
 
 export default function AlertsPage() {
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        const data = await listAlerts({ size: 50 });
-        if (active) setPage(data);
-      } catch (e) {
-        if (active) setError(messageFromError(e));
-      } finally {
-        if (active) setLoading(false);
-      }
+  const load = useCallback(async () => {
+    try {
+      setPage(await listAlerts({ size: 50 }));
+      setError(null);
+    } catch (e) {
+      setError(messageFromError(e));
+    } finally {
+      setLoading(false);
     }
-    load();
-    return () => { active = false; };
   }, []);
+  useEffect(() => { load(); }, [load]);
+  useLiveRefresh(load, 10000); // live: interval + immediate reload on Demo Center / upload / action
 
   const rows = page?.content ?? [];
 

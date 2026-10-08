@@ -1,0 +1,73 @@
+# SentinelAI :: one-command, keyless, offline DEMO stack.
+#
+#   ./scripts/demo.sh up        # build + start, then open http://localhost:8088
+#   ./scripts/demo.sh down      # stop (keeps data)    ./scripts/demo.sh reset  # stop + wipe demo DB
+#
+# Runs the "demo" Spring profile: seeded admin/analyst/viewer accounts with quick-login buttons,
+# Demo Center, offline 'local' AI, Kafka/Redis off. Every value has a demo-only default, so no .env
+# is needed. The credentials are PUBLIC demo credentials — never expose this stack with real data.
+# The first `up` needs internet once to pull base images and Maven/npm dependencies; after that it
+# runs fully offline.
+name: sentinel-demo
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: sentinelai
+      MYSQL_USER: sentinel
+      MYSQL_PASSWORD: ${DEMO_DB_PASSWORD:-sentinel-demo}
+      MYSQL_ROOT_PASSWORD: ${DEMO_DB_ROOT_PASSWORD:-sentinel-demo-root}
+    volumes:
+      - demo_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  backend:
+    build: ../../backend
+    image: sentinel-ai-backend:demo
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: demo
+      DB_URL: jdbc:mysql://mysql:3306/sentinelai?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USER: sentinel
+      DB_PASSWORD: ${DEMO_DB_PASSWORD:-sentinel-demo}
+      CORS_ALLOWED_ORIGINS: http://localhost:${DEMO_PORT:-8088}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 40s
+
+  frontend:
+    build: ../../frontend
+    image: sentinel-ai-frontend:demo
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ":80"
+    ports:
+      - "${DEMO_PORT:-8088}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  demo_mysql:

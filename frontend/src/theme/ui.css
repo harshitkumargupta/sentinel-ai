@@ -328,3 +328,16 @@ body:has(.shell-sidebar--collapsed) .shell-topbar { left: var(--sidebar-w-collap
 .ui-field--error { animation: ui-shake 0.35s var(--ease); }
 .ui-field__msg { display: block; margin-top: 4px; font-size: var(--fs-xs); color: var(--danger); }
 @keyframes ui-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+
+/* --- Demo Center / SIEM pages ------------------------------------------------------------ */
+.scenario-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; }
+.stepper { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid; gap: 0.5rem; }
+.stepper li { padding: 0.5rem 0.75rem; border-left: 3px solid var(--border, #444); }
+.quick-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+.quick-actions p { flex-basis: 100%; margin: 0.25rem 0 0; }
+.quick-login .filters { justify-content: center; }
+.magnitude { display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+.ask-thread { max-height: 360px; overflow-y: auto; }
+@media (max-width: 640px) {
+  .scenario-grid { grid-template-columns: 1fr; }
+}

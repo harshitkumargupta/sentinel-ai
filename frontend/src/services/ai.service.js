@@ -28,3 +28,18 @@ export async function nlSearch(query) {
   const { data } = await api.post('/search/nl', { query });
   return data.data; // { interpretedFilter, results, total }
 }
+
+export async function getAiStatus() {
+  const { data } = await api.get('/ai/status');
+  return data.data; // { enabled, provider, offline, label, model }
+}
+
+export async function listAiQuestions() {
+  const { data } = await api.get('/ai/questions');
+  return data.data; // [{ intent, label }]
+}
+
+export async function askIncident(id, { intent, question }) {
+  const { data } = await api.post(`/incidents/${id}/ask`, { intent, question });
+  return data.data; // { intent, question, answer, bullets, evidenceEventIds, engine, offline }
+}

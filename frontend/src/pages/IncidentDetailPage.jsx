@@ -8,6 +8,7 @@ import StorylineGraph from '../components/StorylineGraph.jsx';
 import Storyline3DLazy from '../components/three/Storyline3DLazy.jsx';
 import AiInvestigationPanel from '../components/AiInvestigationPanel.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
+import AskAiPanel from '../components/AskAiPanel.jsx';
 import SimilarIncidentsPanel from '../components/SimilarIncidentsPanel.jsx';
 import MagnitudePanel from '../components/MagnitudePanel.jsx';
 import OffenseCasePanel from '../components/OffenseCasePanel.jsx';
@@ -103,6 +104,8 @@ export default function IncidentDetailPage() {
               {canTriage && (
                 <AiInvestigationPanel incidentId={id} canReview={canTriage} onHighlight={setHighlighted} />
               )}
+
+              <AskAiPanel incidentId={id} onHighlight={setHighlighted} />
 
               {canTriage && <ActionsPanel incidentId={id} canAct={canTriage} />}
 

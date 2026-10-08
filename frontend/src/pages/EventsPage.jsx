@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLiveRefresh } from '../hooks/useLiveRefresh.js';
 import DataState from '../components/DataState.jsx';
 import SeverityBadge from '../components/SeverityBadge.jsx';
 import { listEvents } from '../services/events.service.js';
@@ -40,6 +41,8 @@ export default function EventsPage() {
     const t = setInterval(load, 10000); // live refresh
     return () => clearInterval(t);
   }, [load, nlResult]);
+
+  useLiveRefresh(() => { if (!nlResult) load(); }, 0);
 
   async function runNlSearch(e) {
     e?.preventDefault();

@@ -32,3 +32,13 @@ export async function rollbackAction(id) {
   const { data } = await api.post(`/actions/${id}/rollback`);
   return data.data;
 }
+
+export async function listActionTargets(incidentId) {
+  const { data } = await api.get(`/incidents/${incidentId}/action-targets`);
+  return data.data; // { ips, users, hosts }
+}
+
+export async function proposeAction(incidentId, actionType, target, reason) {
+  const { data } = await api.post(`/incidents/${incidentId}/actions`, { actionType, target, reason });
+  return data.data;
+}

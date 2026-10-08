@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../theme/ThemeProvider.jsx';
 import CommandPalette from './CommandPalette.jsx';
 import ThreatCoreLazy from './three/ThreatCoreLazy.jsx';
+import AiModeBadge from './AiModeBadge.jsx';
+import { getDemoInfo } from '../services/demo.service.js';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: '▦' },
@@ -18,6 +20,7 @@ const NAV = [
   { to: '/reference-sets', label: 'Reference Sets', icon: '☷' },
   { to: '/log-sources', label: 'Log Sources', icon: '⇲', roles: ['ANALYST', 'ADMIN'] },
   { to: '/sites', label: 'Sites', icon: '⌂' },
+  { to: '/demo-center', label: 'Demo Center', icon: '▶', role: 'ADMIN', demoOnly: true },
   { to: '/admin', label: 'Admin', icon: '⚙', role: 'ADMIN' },
   { to: '/admin-risk', label: 'Admin Risk', icon: '⚖', role: 'ADMIN' },
   { to: '/pipeline', label: 'Pipeline', icon: '⇄', role: 'ADMIN' },
@@ -40,9 +43,12 @@ export default function NavBar() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
+  const [demoMode, setDemoMode] = useState(false);
+  useEffect(() => { getDemoInfo().then((i) => setDemoMode(Boolean(i.demoMode))).catch(() => {}); }, []);
   const links = useMemo(
-    () => NAV.filter((n) => (!n.role || hasRole(n.role)) && (!n.roles || hasRole(...n.roles))),
-    [hasRole],
+    () => NAV.filter((n) => (!n.role || hasRole(n.role)) && (!n.roles || hasRole(...n.roles))
+      && (!n.demoOnly || demoMode)),
+    [hasRole, demoMode],
   );
 
   useEffect(() => {
@@ -100,6 +106,7 @@ export default function NavBar() {
           <kbd className="shell-kbd">⌘K</kbd>
         </button>
         <div className="shell-topbar__right">
+          <AiModeBadge />
           <select className="shell-site" aria-label="Site selector" defaultValue="all">
             <option value="all">All sites</option>
           </select>
