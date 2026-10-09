@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 # ---- Build stage: produce the static Vite bundle ----
 FROM node:20-alpine AS build
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci
