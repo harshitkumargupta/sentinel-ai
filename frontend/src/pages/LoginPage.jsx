@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getDemoInfo } from '../services/demo.service.js';
-import LoginGlobeLazy from '../components/three/LoginGlobeLazy.jsx';
 import './login.css';
 
-const IS_DEV = import.meta.env.DEV;
+const DEMO_ACCOUNTS = [
+  { username: 'admin',   password: 'Admin@123',   role: 'Admin'   },
+  { username: 'analyst', password: 'Analyst@123', role: 'Analyst' },
+  { username: 'viewer',  password: 'Viewer@123',  role: 'Viewer'  },
+];
 
 const EyeIcon = ({ open }) =>
   open ? (
@@ -52,14 +54,6 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [quick, setQuick] = useState([]);
-
-  // Demo profile: server lists its public demo accounts for one-click sign-in (dev/demo only).
-  useEffect(() => {
-    getDemoInfo()
-      .then((i) => setQuick(i.quickLogins || []))
-      .catch(() => setQuick([]));
-  }, []);
 
   async function quickLogin(account) {
     setError(null);
@@ -180,13 +174,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* ── RIGHT: globe + login card ── */}
+        {/* ── RIGHT: login card ── */}
         <div className="lpv2-right">
-          {/* Globe visual (decorative) */}
-          <div className="lpv2-globe-wrap">
-            <LoginGlobeLazy />
-          </div>
-
           {/* Login card */}
           <div className="lpv2-card" role="main" aria-label="Sign in">
             <div className="lpv2-card-topline" aria-hidden="true" />
@@ -298,25 +287,23 @@ export default function LoginPage() {
               <span>Secure access to SentinelAI · All logins are encrypted and audited.</span>
             </div>
 
-            {/* Dev-only quick login — hidden in production */}
-            {IS_DEV && quick.length > 0 && (
-              <div className="lpv2-dev-quick" data-testid="dev-quick-login">
-                <p className="lpv2-dev-label">Dev — quick sign in</p>
-                <div className="lpv2-dev-btns">
-                  {quick.map((a) => (
-                    <button
-                      key={a.username}
-                      type="button"
-                      className="lpv2-dev-btn"
-                      disabled={submitting}
-                      onClick={() => quickLogin(a)}
-                    >
-                      {a.role.charAt(0) + a.role.slice(1).toLowerCase()}
-                    </button>
-                  ))}
-                </div>
+            {/* Quick access — one-click demo accounts */}
+            <div className="lpv2-quick">
+              <p className="lpv2-quick-label">Quick access</p>
+              <div className="lpv2-quick-btns">
+                {DEMO_ACCOUNTS.map((a) => (
+                  <button
+                    key={a.username}
+                    type="button"
+                    className={`lpv2-quick-btn lpv2-quick-btn--${a.username}`}
+                    disabled={submitting}
+                    onClick={() => quickLogin(a)}
+                  >
+                    {a.role}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

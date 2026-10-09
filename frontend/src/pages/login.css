@@ -302,11 +302,6 @@
   background: radial-gradient(60% 60% at 50% 50%, rgba(0, 200, 232, 0.06) 0%, transparent 70%), #040c18;
 }
 
-.lpv2-globe-wrap {
-  position: absolute;
-  inset: 0;
-}
-
 /* ── Login card ── */
 .lpv2-card {
   position: absolute;
@@ -536,46 +531,63 @@
   border-radius: 4px;
 }
 
-/* Dev-only quick login section */
-.lpv2-dev-quick {
+/* Quick access role buttons */
+.lpv2-quick {
   margin-top: 0.9rem;
   padding-top: 0.9rem;
-  border-top: 1px dashed rgba(43, 56, 80, 0.5);
+  border-top: 1px solid rgba(43, 56, 80, 0.5);
 }
 
-.lpv2-dev-label {
+.lpv2-quick-label {
   font-family: var(--font-mono, monospace);
   font-size: 8.5px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(240, 180, 41, 0.5);
-  margin-bottom: 0.45rem;
+  color: rgba(238, 243, 250, 0.35);
+  margin-bottom: 0.55rem;
 }
 
-.lpv2-dev-btns {
+.lpv2-quick-btns {
   display: flex;
   gap: 0.45rem;
-  flex-wrap: wrap;
 }
 
-.lpv2-dev-btn {
-  padding: 0.3rem 0.65rem;
-  background: rgba(18, 25, 38, 0.55);
-  border: 1px solid rgba(240, 180, 41, 0.28);
-  border-radius: 5px;
-  color: rgba(240, 180, 41, 0.65);
-  font-size: 11px;
-  cursor: pointer;
+.lpv2-quick-btn {
+  flex: 1;
+  padding: 0.45rem 0.5rem;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
   font-family: inherit;
-  transition: border-color 140ms, color 140ms;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: filter 140ms, transform 80ms;
+  border: 1px solid transparent;
 }
 
-.lpv2-dev-btn:hover:not(:disabled) {
-  border-color: rgba(240, 180, 41, 0.58);
-  color: rgba(240, 180, 41, 0.9);
-}
+.lpv2-quick-btn:active:not(:disabled) { transform: translateY(1px); }
+.lpv2-quick-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.lpv2-dev-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.lpv2-quick-btn--admin {
+  background: rgba(115, 215, 232, 0.12);
+  border-color: rgba(115, 215, 232, 0.35);
+  color: #73d7e8;
+}
+.lpv2-quick-btn--admin:hover:not(:disabled) { filter: brightness(1.25); }
+
+.lpv2-quick-btn--analyst {
+  background: rgba(79, 191, 138, 0.1);
+  border-color: rgba(79, 191, 138, 0.32);
+  color: #4fbf8a;
+}
+.lpv2-quick-btn--analyst:hover:not(:disabled) { filter: brightness(1.25); }
+
+.lpv2-quick-btn--viewer {
+  background: rgba(147, 112, 219, 0.1);
+  border-color: rgba(147, 112, 219, 0.32);
+  color: #a78bfa;
+}
+.lpv2-quick-btn--viewer:hover:not(:disabled) { filter: brightness(1.25); }
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
