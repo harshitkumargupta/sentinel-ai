@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   // Built files go to /static/ — "/assets" is an app route (Assets page), so it must not be a folder.
   build: { assetsDir: 'static' },
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
     // Proxy API calls to the Spring Boot backend during development.

@@ -1,36 +1,42 @@
 import { Suspense } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Outlet, useLocation } from 'react-router-dom';
 import NavBar from './NavBar.jsx';
 import RouteProgress from './RouteProgress.jsx';
 import OnboardingTour from './OnboardingTour.jsx';
+import { useTheme } from '../theme/ThemeProvider.jsx';
 
-/**
- * Persistent app shell: the sidebar + top bar stay mounted (so the sliding active pill animates
- * across routes) while only the routed page content fades/slides on navigation. Reduced/Off motion
- * is handled centrally by <MotionConfig>, so this needs no per-page guard.
- */
 export default function Layout() {
   const location = useLocation();
+  const { motionOff } = useTheme();
+
+  const outlet = (
+    <Suspense fallback={<div className="route-fallback" />}>
+      <Outlet />
+    </Suspense>
+  );
+
   return (
     <div className="app-shell">
       <RouteProgress />
       <OnboardingTour />
       <NavBar />
       <main className="content">
-        <AnimatePresence mode="wait">
+        {motionOff ? (
+          <div key={location.pathname}>{outlet}</div>
+        ) : (
+          // No AnimatePresence — React StrictMode + FM11 AnimatePresence exit tracking
+          // causes orphaned elements that stack off-screen. Enter-only animation (fade-in
+          // on key change) is clean and avoids all exit-cleanup race conditions.
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
           >
-            <Suspense fallback={<div className="route-fallback" />}>
-              <Outlet />
-            </Suspense>
+            {outlet}
           </motion.div>
-        </AnimatePresence>
+        )}
       </main>
     </div>
   );

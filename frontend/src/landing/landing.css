@@ -1,0 +1,85 @@
+/* ─────────────────────────────────────────────────────────────
+   SentinelAI Landing Page Styles
+
+   Tailwind CSS v4 is used for utility classes. Its Preflight/base
+   resets live in @layer base — SentinelAI's unlayered styles always
+   win over layered styles per the CSS Cascade specification, so
+   adding Tailwind here does NOT break the SOC application styles.
+   ───────────────────────────────────────────────────────────── */
+
+/* Archivo variable font — only loaded for landing page */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap');
+
+@import 'tailwindcss';
+
+/* Tailwind theme tokens for the landing page */
+@theme {
+  --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --color-cyan: #73D7E8;
+  --color-amber: #D98A32;
+  --color-threat: #C84D4D;
+}
+
+/* ── CSS variable defaults — scoped to the landing container.
+   The background controller updates these on the landing div (not :root)
+   so they never leak into the SentinelAI SOC application. ── */
+.landing-page {
+  --bg: #050607;
+  --fg: #F1F0EB;
+  --mute: rgba(241, 240, 235, 0.5);
+  --line: rgba(241, 240, 235, 0.12);
+}
+
+/* ── Box model reset scoped to landing — avoids touching SOC elements ── */
+.landing-page *,
+.landing-page *::before,
+.landing-page *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+}
+
+/* ── Custom helper classes — all scoped to .landing-page ── */
+.landing-page .cond {
+  font-stretch: 68%;
+  font-variation-settings: 'wdth' 68;
+}
+.landing-page .semi {
+  font-stretch: 85%;
+  font-variation-settings: 'wdth' 85;
+}
+.landing-page .fg  { color: var(--fg); }
+.landing-page .mute { color: var(--mute); }
+.landing-page .bl  { border-color: var(--line); }
+.landing-page .grid-lines {
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+@keyframes lp-blink { 50% { opacity: .25 } }
+.landing-page .blink { animation: lp-blink 1.6s steps(2) infinite; }
+
+.landing-page .grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Respect system reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .landing-page .blink { animation: none; }
+  .landing-page { scroll-behavior: auto; }
+}
+
+/* ── Performance: isolate landing repaint layer from SOC shell ── */
+.landing-page {
+  contain: layout style;
+  isolation: isolate;
+}
+
+/* Canvas layer hint */
+.landing-page canvas {
+  will-change: contents;
+}

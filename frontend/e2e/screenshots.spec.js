@@ -9,7 +9,7 @@ const OUT = '../docs/screenshots';
 async function login(page) {
   await page.goto('/login');
   await page.getByLabel('Username').fill(USER);
-  await page.getByLabel('Password').fill(PASS);
+  await page.getByLabel('Password', { exact: true }).fill(PASS);
   await page.getByRole('button', { name: /sign in/i }).click();
   await page.waitForURL(/dashboard/);
 }
