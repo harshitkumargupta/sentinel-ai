@@ -5,7 +5,9 @@ import tailwindcss from '@tailwindcss/vite';
 // https://vitejs.dev/config/
 export default defineConfig({
   // Built files go to /static/ — "/assets" is an app route (Assets page), so it must not be a folder.
-  build: { assetsDir: 'static' },
+  // modulePreload polyfill disabled: Vite 5's CSS preload polyfill fires onerror on Railway's nginx,
+  // crashing the LandingPage lazy chunk. Native module preload (supported in all modern browsers) works fine.
+  build: { assetsDir: 'static', modulePreload: { polyfill: false } },
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
